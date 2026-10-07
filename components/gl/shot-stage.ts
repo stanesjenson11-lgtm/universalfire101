@@ -105,13 +105,68 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   const state = { r: 0, s: still ? 0 : 0 };
   const v = new THREE.Vector3();
 
+  /*
+   * Companion: after the fire it keeps you company down the page, drifting in
+   * the margin beside each section — gsap.com/scroll's props, but this one is
+   * the product. One pose per section (side of the screen, height, size,
+   * facing, lean); it eases from pose to pose as each section passes, steps
+   * out for the exploded view, and ends standing upright by the footer.
+   * Only where the margins are wide enough to hold it.
+   */
+  const companion = !still && window.matchMedia("(min-width: 1280px)").matches;
+  const POSES = [
+    { sel: "#about", side: 1, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 1 },
+    { sel: "#inside", side: 1, y: 0.6, h: 0.22, yaw: 1.5, tilt: -0.3, o: 0 },
+    { sel: "#products", side: -1, y: 0.6, h: 0.24, yaw: -0.5, tilt: 0.2, o: 1 },
+    { sel: "#specs", side: 1, y: 0.68, h: 0.24, yaw: 1.4, tilt: -0.12, o: 1 },
+    { sel: "#services", side: -1, y: 0.5, h: 0.24, yaw: 2.3, tilt: 0.28, o: 1 },
+    { sel: "#sectors", side: 1, y: 0.42, h: 0.22, yaw: 3.1, tilt: -0.34, o: 1 },
+    { sel: "#equipment", side: -1, y: 0.7, h: 0.24, yaw: 4.0, tilt: 0.12, o: 1 },
+    { sel: "#why", side: 1, y: 0.58, h: 0.24, yaw: 4.6, tilt: -0.2, o: 1 },
+    { sel: "#licence", side: -1, y: 0.6, h: 0.24, yaw: 5.4, tilt: 0.24, o: 1 },
+    { sel: "#contact", side: -1, y: 0.62, h: 0.24, yaw: 6.0, tilt: 0.1, o: 1 },
+    { sel: "footer", side: 1, y: 0.3, h: 0.34, yaw: 6.6, tilt: 0, o: 1, fx: 0.58, onPage: true }, // upright in the 24/7 band, scrolls away with it
+  ].map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
+  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, o: 0 };
+  let lastY = window.scrollY;
+  let lean = 0;
+  const companionPose = (time: number) => {
+    const mid = H * 0.5;
+    let c = 0;
+    POSES.forEach((p, i) => p.el && p.el.getBoundingClientRect().top <= mid && (c = i));
+    const cur = POSES[c];
+    const next = POSES[Math.min(c + 1, POSES.length - 1)];
+    // Holds its pose through a section (however long — pinned ones are), and
+    // moves on as the next section rises from the bottom to the middle.
+    const nextTop = next === cur ? H : next.el!.getBoundingClientRect().top;
+    const t = inOut(clamp01((H - nextTop) / (H - mid)));
+    // In the middle of the margin beside the 72rem content column.
+    const margin = Math.max(56, (W - 1152) / 4);
+    const sx = (p: (typeof POSES)[number]) => ("fx" in p ? W * (p.fx as number) : p.side > 0 ? W - margin : margin);
+    pose.x = lerp(sx(cur), sx(next), t);
+    // Poses marked onPage sit on their section (y from its top) and scroll
+    // with it; the rest hold their place on screen.
+    const py = (p: (typeof POSES)[number]) => ("onPage" in p ? p.el!.getBoundingClientRect().top + p.y * H : p.y * H);
+    pose.y = lerp(py(cur), py(next), t) + Math.sin(time * 0.7) * H * 0.012;
+    pose.h = lerp(cur.h, next.h, t) * H;
+    pose.yaw = lerp(cur.yaw, next.yaw, t) + time * 0.12;
+    pose.o = lerp(cur.o, next.o, t);
+    // Leans into the scroll, a beat behind it.
+    const vel = window.scrollY - lastY;
+    lastY = window.scrollY;
+    lean += (Math.max(-0.35, Math.min(0.35, vel * 0.004)) - lean) * 0.06;
+    pose.tilt = lerp(cur.tilt, next.tilt, t) + Math.sin(time * 0.5) * 0.04 - lean;
+  };
+
   const apply = (time: number) => {
     const a = home.getBoundingClientRect();
     const b = land.getBoundingClientRect();
     const f = fire.getBoundingClientRect();
     const heroOn = a.bottom > -H && hero.getBoundingClientRect().bottom > 0;
     const fireOn = f.bottom > 0 && f.top < H;
-    if (!heroOn && !fireOn) {
+    // 0 while the fire section holds the screen, 1 once it has gone.
+    const after = companion ? clamp01((H * 0.9 - f.bottom) / (H * 0.6)) : 0;
+    if (!heroOn && !fireOn && !companion) {
       // Off both sections: leave nothing on the fixed layer.
       if (canvas.style.visibility !== "hidden") canvas.style.visibility = "hidden";
       return;
@@ -140,12 +195,29 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const lean = r < 0.1 ? -Math.sin((r / 0.1) * Math.PI) * 0.08 : 0;
     rig.rotation.z = -Math.PI * 2 * e + lean;
 
+    // Into companion mode as the fire section leaves.
+    let o = 1;
+    if (after > 0) {
+      companionPose(time);
+      const blend = inOut(after);
+      const target = world(pose.x, pose.y);
+      rig.position.lerp(target, blend);
+      rig.scale.setScalar(lerp(scale, (pose.h * k) / HEIGHT, blend));
+      rig.rotation.y = lerp(rig.rotation.y, pose.yaw, blend);
+      rig.rotation.z = lerp(rig.rotation.z, pose.tilt, blend);
+      o = lerp(1, pose.o, blend);
+    }
+    if (!companion && !fireOn && !heroOn) o = 0;
+    canvas.style.opacity = o.toFixed(3);
+    if (o < 0.01) return;
+
     // The discharge: the pin comes out first, then the body kicks with it.
     const pulled = smooth(0.0, 0.05, s);
     parts.pin.position.set(pinRest.x + pulled * 0.12, pinRest.y - smooth(0.04, 0.12, s) * 0.5, pinRest.z);
-    parts.pin.visible = s < 0.12;
-    // Then the hose comes up and points at the fire, ~106° from hanging.
-    hosePivot.rotation.z = -1.85 * inOut(smooth(0.02, 0.09, s));
+    parts.pin.visible = s < 0.12 || after > 0.5;
+    // Then the hose comes up and points at the fire, ~106° from hanging —
+    // and hangs back down once the job is done and it moves on.
+    hosePivot.rotation.z = -1.85 * inOut(smooth(0.02, 0.09, s)) * (1 - inOut(after));
     const spraying = s > 0.06 && s < 0.9;
     if (spraying) rig.position.x += Math.sin(time * 47) * 0.0025 * scale;
 
@@ -153,7 +225,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const grounded = 1 - Math.sin(Math.PI * clamp01(r * 1.1));
     shadow.position.set(rig.position.x, base.y + 0.002, 0);
     shadow.scale.setScalar(scale);
-    (shadow.material as THREE.MeshBasicMaterial).opacity = grounded;
+    (shadow.material as THREE.MeshBasicMaterial).opacity = grounded * (1 - after);
 
     // Fire light: comes up as the fire section rises, dies with the fire.
     const firePresence = clamp01((H - f.top) / H);

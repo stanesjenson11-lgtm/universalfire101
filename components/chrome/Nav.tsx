@@ -64,10 +64,10 @@ export default function Nav() {
       >
         <div ref={bar} className="uf-nav pointer-events-auto flex items-center justify-between gap-6">
           <a href="#top" className="uf-logo shrink-0" aria-label={`${site.name} — back to top`}>
-            <Emblem />
+            <Emblem variant="mark" />
             <span className="flex flex-col leading-none" aria-hidden="true">
-              <span className="text-[0.95rem] font-semibold tracking-[-0.01em]">Universal Fire</span>
-              <span className="mt-0.5 text-micro opacity-70">Safety Equipments</span>
+              <span className="text-[1.05rem] font-bold tracking-[-0.015em]">Universal Fire</span>
+              <span className="mt-1 text-micro opacity-75">Safety Equipments</span>
             </span>
           </a>
 

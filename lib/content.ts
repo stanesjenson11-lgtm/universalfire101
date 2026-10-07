@@ -1153,7 +1153,7 @@ export const home = {
       { name: "ABC dry powder", note: "MAP-based agent for class A, B and C fires." },
       { name: "Steel cylinder", note: "Test pressure 35 bar. BIS approved." },
       { name: "Inspection tag", note: "Dated and signed on every service visit." },
-      { name: "Stand", note: "Keeps it upright, visible and off damp floors." },
+      { name: "Base cup", note: "Moulded foot that keeps the cylinder off damp floors." },
     ],
   },
   licence: { first: "Need a", second: "fire licence?", media: img("Tamil-Nadu-Fire-License-1.webp", "Tamil Nadu fire licence"), href: "#fire-licence" },

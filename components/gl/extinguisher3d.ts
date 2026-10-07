@@ -7,9 +7,10 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
  * and rebranded for Universal Fire by scripts/build-model.mjs. Loaded once,
  * shared by the scroll shot and the exploded view.
  *
- * Parts (node names): cylinder, base, strap, hose, valve, lever, handle, pin,
- * gauge, gauge-glass, tag. Units are metres; the base stands on y = 0 and the
- * extinguisher is 0.659 m tall.
+ * Parts (node names): cylinder, strap, hose, valve, lever, handle, pin, gauge,
+ * gauge-glass, tag — plus "foot", a moulded black base cup added here. The
+ * scan stood on a display stand ("base"), which is hidden: an extinguisher
+ * stands on its own foot. Units are metres; it stands on y = 0, 0.659 m tall.
  */
 export const HEIGHT = 0.659;
 
@@ -27,6 +28,29 @@ export async function studioEnvironment(renderer: THREE.WebGLRenderer) {
   return env;
 }
 
+/** The cylinder's axis in the scan (metres): x 0, z 0.029. */
+export const AXIS_Z = 0.029;
+
+/**
+ * The foot: a moulded plastic cup the cylinder sits in, its rim just over the
+ * cylinder's bottom edge, a rounded heel and a recessed sole — the base of a
+ * real stored-pressure extinguisher.
+ */
+function foot() {
+  const profile = [
+    [0, 0.004], [0.078, 0.004], [0.084, 0.0], [0.091, 0.003], [0.0955, 0.011],
+    [0.0965, 0.024], [0.0965, 0.074], [0.0952, 0.081], [0.0935, 0.083],
+  ].map(([x, y]) => new THREE.Vector2(x, y));
+  const m = new THREE.Mesh(
+    new THREE.LatheGeometry(profile, 96),
+    new THREE.MeshPhysicalMaterial({ color: "#121214", roughness: 0.52, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.4, side: THREE.DoubleSide }),
+  );
+  m.name = "foot";
+  m.position.z = AXIS_Z;
+  m.castShadow = true;
+  return m;
+}
+
 /** A fresh copy of the model whose materials can be changed without touching the other copy. */
 export async function extinguisher(options: { ownMaterials?: boolean } = {}) {
   const { scene } = await loadExtinguisher();
@@ -41,6 +65,9 @@ export async function extinguisher(options: { ownMaterials?: boolean } = {}) {
     m.castShadow = true;
     parts[m.name] = m;
   });
+  parts.base.visible = false;
+  parts.foot = foot();
+  root.add(parts.foot);
   return { root, parts };
 }
 

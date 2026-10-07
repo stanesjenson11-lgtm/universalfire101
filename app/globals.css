@@ -344,8 +344,8 @@
 .uf-logo {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  height: 2.25rem;
+  gap: 0.65rem;
+  height: 2.75rem;
   transform-origin: left center;
   transition: scale 800ms var(--ease-out-expo);
 }
@@ -475,10 +475,23 @@
    ========================================================================== */
 
 .uf-loader {
-  animation: uf-loader-out 900ms var(--ease-out-expo) 750ms both;
+  animation: uf-loader-out 850ms var(--ease-out-expo) 1650ms both;
 }
-.uf-loader-mark {
-  animation: uf-mark-in 650ms var(--ease-out-expo) both;
+/* Each line draws from nothing (pathLength = 1), staggered by its own delay. */
+.uf-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: uf-draw 1000ms var(--ease-out-quart) forwards;
+}
+.uf-draw-text {
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: uf-draw 1200ms var(--ease-out-quart) 450ms forwards;
+}
+@keyframes uf-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 @keyframes uf-loader-out {
   from {
@@ -487,13 +500,6 @@
   to {
     clip-path: inset(0 0 100% 0);
     visibility: hidden;
-  }
-}
-@keyframes uf-mark-in {
-  from {
-    opacity: 0;
-    scale: 0.82;
-    rotate: -24deg;
   }
 }
 

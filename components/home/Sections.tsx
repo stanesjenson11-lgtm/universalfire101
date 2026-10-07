@@ -218,7 +218,7 @@ export function Sectors() {
   const track = useRef<HTMLUListElement>(null);
   const nudge = (dir: 1 | -1) => track.current?.scrollBy({ left: dir * track.current.clientWidth * 0.8, behavior: "smooth" });
   return (
-    <section data-ground="light" className="bg-white py-section-lg">
+    <section id="sectors" data-ground="light" className="bg-white py-section-lg">
       <div className="mx-auto flex max-w-[72rem] flex-wrap items-end justify-between gap-6 px-gutter">
         <div className="max-w-[46rem]">
           <Headline>{heading}</Headline>
@@ -271,7 +271,7 @@ const HOSE =
 export function Equipment() {
   const { heading, body, items } = home.equipment;
   return (
-    <section data-ground="dark" className="on-black relative overflow-hidden pt-section-lg pb-section">
+    <section id="equipment" data-ground="dark" className="on-black relative overflow-hidden pt-section-lg pb-section">
       <div className="mx-auto max-w-[72rem] px-gutter text-center">
         <Headline>{heading}</Headline>
         <p className="mx-auto mt-5 max-w-[52ch] text-lead text-muted-dark">{body}</p>
@@ -316,7 +316,7 @@ export function Why() {
   const { heading, body, items } = home.why;
   const box = useRef<HTMLDivElement>(null);
   return (
-    <section data-ground="light" className="bg-white px-gutter py-section-lg">
+    <section id="why" data-ground="light" className="bg-white px-gutter py-section-lg">
       <div ref={box} className="mx-auto max-w-[72rem]">
         <VariableFontCursorProximity
           as="h2"
@@ -354,7 +354,7 @@ export function Why() {
 export function Licence() {
   const { first, second, media, href } = home.licence;
   return (
-    <section data-ground="light" className="bg-white px-gutter pb-section-lg">
+    <section id="licence" data-ground="light" className="bg-white px-gutter pb-section-lg">
       <a href={href} className="block" aria-label="Need a fire licence? We handle the application">
         <Statement first={first} second={second} media={media} />
         <span className="mt-6 block text-center text-lead text-muted">

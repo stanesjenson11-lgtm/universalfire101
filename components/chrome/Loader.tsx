@@ -1,14 +1,14 @@
-import Emblem from "@/components/ui/Emblem";
+import { EmblemSkeleton } from "@/components/ui/Emblem";
 
 /**
- * Home only, CSS only: the emblem settles in, then the black lifts off the page
- * like a shutter. No script — it plays on first paint and is gone in ~1.5s.
- * Reduced-motion visitors never see it (globals.css).
+ * Home only, CSS only — Kickstart's preloader rhythm: the emblem draws itself
+ * as white line-art on black, holds a beat, then the black lifts off the page
+ * like a shutter. No script; reduced-motion visitors never see it.
  */
 export default function Loader() {
   return (
     <div aria-hidden="true" className="uf-loader pointer-events-none fixed inset-0 z-[var(--z-loader)] grid place-items-center bg-black">
-      <Emblem className="uf-loader-mark h-36 w-36" />
+      <EmblemSkeleton className="h-40 w-40" />
     </div>
   );
 }

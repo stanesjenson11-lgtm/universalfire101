@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { gsap, ScrollTrigger } from "@/lib/motion";
-import { extinguisher, studioEnvironment, contactShadow, HEIGHT } from "./extinguisher3d";
+import { extinguisher, studioEnvironment, contactShadow, HEIGHT, AXIS_Z } from "./extinguisher3d";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -10,9 +10,6 @@ const smooth = (a: number, b: number, x: number) => {
 };
 const inOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const V = (x: number, y: number, z = 0) => new THREE.Vector3(x, y, z);
-
-/** The cylinder's axis in the scan (metres): x 0, z 0.029. */
-const AXIS_Z = 0.029;
 
 /**
  * Same order as home.inside.parts in lib/content.ts. `meshes` are node names
@@ -31,7 +28,7 @@ const PARTS: { meshes: string[]; explode: THREE.Vector3; tilt?: number; delay: n
   { meshes: ["powder"], explode: V(0, 0), delay: 0.3 },
   { meshes: ["cylinder", "strap"], explode: V(0, 0), delay: 0.3 },
   { meshes: ["tag"], explode: V(-0.09, 0.01, -0.04), tilt: -0.2, delay: 0.22 },
-  { meshes: ["base"], explode: V(0, -0.13), delay: 0.2 },
+  { meshes: ["foot"], explode: V(0, -0.12), delay: 0.2 },
 ];
 
 type Els = {
