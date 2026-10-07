@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { home, page, products, services, type Block } from "@/lib/content";
 import Rich from "@/components/ui/Rich";
+import { gsap, useGsap } from "@/lib/motion";
 import { SpecTable, Statement } from "@/components/Blocks";
 import Enquiry from "@/components/Enquiry";
 import StackingCards, { StackingCardItem } from "@/components/fancy/blocks/stacking-cards";
@@ -90,15 +91,16 @@ export function Products() {
       <StackingCards totalCards={products.length} scaleMultiplier={0.02} className="mx-auto mt-14 max-w-[72rem]">
         {products.map((p, i) => (
           <StackingCardItem key={p.slug} index={i} className="h-[min(78svh,40rem)]" topPosition={`${5.5 + i * 0.5}rem`}>
-            <article className="tile grid h-[92%] overflow-hidden bg-white shadow-[0_2px_24px_rgb(0_0_0/0.06)] wide:grid-cols-2">
-              <div className="flex flex-col justify-end gap-5 p-[clamp(1.5rem,4vw,3.5rem)]">
-                <h3 className="text-h1 font-semibold">{p.label}</h3>
+            {/* Phones: the picture fills the top of the card, the words sit under it. */}
+            <article className="tile grid h-[92%] grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-white shadow-[0_2px_24px_rgb(0_0_0/0.06)] wide:grid-cols-2 wide:grid-rows-1">
+              <div className="flex flex-col justify-end gap-3 p-[clamp(1.25rem,4vw,3.5rem)] wide:gap-5">
+                <h3 className="text-h2 font-semibold wide:text-h1">{p.label}</h3>
                 <p className="max-w-[44ch] text-muted">{strip(p.lede)}</p>
                 <a href={`#${p.slug}`} className="more text-lead">
                   Learn more
                 </a>
               </div>
-              <div className="relative min-h-44 bg-white">
+              <div className="relative order-first min-h-0 bg-white wide:order-last">
                 <Image
                   src={p.image.src}
                   alt={p.image.alt}
@@ -212,13 +214,42 @@ export function Services() {
 
 /* ------------------------------------------------------------------------ */
 
-/** By sector, the agents that suit it — a native scroll-snap carousel. */
+/**
+ * By sector, the agents that suit it. The section holds still while scrolling
+ * down runs the photos across from first to last. Without motion it is a
+ * native scroll-snap carousel with its own buttons.
+ */
 export function Sectors() {
   const { heading, intro, items } = home.sectors;
   const track = useRef<HTMLUListElement>(null);
   const nudge = (dir: 1 | -1) => track.current?.scrollBy({ left: dir * track.current.clientWidth * 0.8, behavior: "smooth" });
+  const scope = useGsap<HTMLElement>(({ self }) => {
+    const ul = track.current!;
+    const dist = () => ul.scrollWidth - ul.clientWidth;
+    self.dataset.driven = "";
+    gsap.to(ul, {
+      x: () => -dist(),
+      ease: "none",
+      scrollTrigger: {
+        trigger: self,
+        pin: true,
+        // Hold with the heading just under the nav and the photos on screen;
+        // on a screen too short for both, the photos win.
+        start: () => {
+          const cs = getComputedStyle(self);
+          const pt = parseFloat(cs.paddingTop);
+          const content = self.offsetHeight - pt - parseFloat(cs.paddingBottom);
+          return content + 96 <= innerHeight ? `top+=${pt - 96} top` : "bottom bottom";
+        },
+        end: () => `+=${dist()}`,
+        scrub: 0.6,
+        invalidateOnRefresh: true,
+      },
+    });
+    return () => delete self.dataset.driven;
+  });
   return (
-    <section id="sectors" data-ground="light" className="bg-white py-section-lg">
+    <section ref={scope} id="sectors" data-ground="light" className="group overflow-x-clip bg-white py-section-lg">
       <div className="mx-auto flex max-w-[72rem] flex-wrap items-end justify-between gap-6 px-gutter">
         <div className="max-w-[46rem]">
           <Headline>{heading}</Headline>
@@ -226,7 +257,7 @@ export function Sectors() {
             <Rich text={intro} />
           </p>
         </div>
-        <div className="flex gap-2" aria-label="Scroll sectors">
+        <div className="flex gap-2 group-data-[driven]:hidden" aria-label="Scroll sectors">
           {([-1, 1] as const).map((d) => (
             <button
               key={d}
@@ -241,12 +272,12 @@ export function Sectors() {
       </div>
       <ul
         ref={track}
-        className="mt-12 flex snap-x snap-mandatory gap-grid overflow-x-auto scroll-px-gutter px-gutter pb-4 [scrollbar-width:none]"
+        className="mt-12 flex snap-x snap-mandatory gap-grid overflow-x-auto scroll-px-gutter px-gutter pb-4 [scrollbar-width:none] group-data-[driven]:snap-none group-data-[driven]:overflow-visible"
       >
         {items.map((it) => (
           <li key={it.name} className="w-[min(82vw,26rem)] shrink-0 snap-start">
             <article className="tile overflow-hidden bg-paper">
-              <div className="relative aspect-[4/5]">
+              <div className="relative aspect-[4/3]">
                 <Image src={it.image.src} alt={it.image.alt} fill sizes="26rem" className="object-cover" />
               </div>
               <div className="p-6">

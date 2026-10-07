@@ -80,9 +80,10 @@ export default function Nav() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <a href={`tel:${site.phone.tel}`} className="btn btn-fire !min-h-9 !px-4 !py-1.5 !text-small tabular-nums">
-              <span className="max-[420px]:hidden">{site.phone.display.replace("+91 ", "")}</span>
-              <span className="min-[421px]:hidden">Call</span>
+            {/* Phones get Kickstart's bar: the mark and the menu; the call
+                button lives in the sheet. */}
+            <a href={`tel:${site.phone.tel}`} className="btn btn-fire !min-h-9 !px-4 !py-1.5 !text-small tabular-nums max-bar:hidden">
+              {site.phone.display.replace("+91 ", "")}
             </a>
             <button
               className="relative z-[var(--z-overlay)] flex h-10 w-10 items-center justify-center bar:hidden"

@@ -120,8 +120,12 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
    *  - At "Inside every extinguisher" it flies to the centre at exactly the
    *    size, angle and tilt the exploded view starts from, and the two models
    *    cross-fade (shot.inside): it merges in, and comes back out the same way.
-   *  - Crossing the page it alternates between leaving a residue of foam
-   *    behind it and tipping over to rocket across on a jet from its nozzle.
+   *  - From the products on it keeps to the left margin and turns as you
+   *    scroll. At "Looked after, all year" it rockets off down to the right,
+   *    dripping foam, and comes back up for "Send an enquiry".
+   *  - Its long moves are a rocket boost (lying over toward where it is going
+   *    on a jet of foam), a trail of foam residue, or both; only while you
+   *    are actually scrolling.
    *  - It ends standing upright in the footer's 24/7 band.
    * Only where the margins are wide enough to hold it.
    */
@@ -129,24 +133,29 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   type Pose = {
     sel: string; side: number; y: number; h: number; yaw: number; tilt: number; o: number;
     fx?: number; onPage?: boolean; exact?: boolean; pitch?: number; el?: HTMLElement | null;
+    /** How it travels into this pose. */
+    move?: { rocket?: boolean; trail?: boolean };
   };
   const POSES = ([
     { sel: "#about", side: 1, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 1 },
     // The exploded view's opening frame: centred, 69% of the screen, facing -0.95.
-    { sel: "#inside", side: 0, fx: 0.5, y: 0.572, h: 0.69, yaw: -0.95, tilt: 0, pitch: 0.14, o: 1, exact: true },
-    { sel: "#products", side: -1, y: 0.6, h: 0.24, yaw: -0.5, tilt: 0.2, o: 1 },
-    { sel: "#specs", side: 1, y: 0.68, h: 0.24, yaw: 1.4, tilt: -0.12, o: 1 },
-    { sel: "#services", side: -1, y: 0.5, h: 0.24, yaw: 2.3, tilt: 0.28, o: 1 },
-    { sel: "#sectors", side: 1, y: 0.42, h: 0.22, yaw: 3.1, tilt: -0.34, o: 1 },
-    { sel: "#equipment", side: -1, y: 0.7, h: 0.24, yaw: 4.0, tilt: 0.12, o: 1 },
-    { sel: "#why", side: 1, y: 0.58, h: 0.24, yaw: 4.6, tilt: -0.2, o: 1 },
-    { sel: "#licence", side: -1, y: 0.6, h: 0.24, yaw: 5.4, tilt: 0.24, o: 1 },
-    { sel: "#contact", side: -1, y: 0.62, h: 0.24, yaw: 6.0, tilt: 0.1, o: 1 },
-    { sel: "footer", side: 1, y: 0.3, h: 0.34, yaw: 6.6, tilt: 0, o: 1, fx: 0.58, onPage: true, exact: true }, // upright in the 24/7 band
+    { sel: "#inside", side: 0, fx: 0.5, y: 0.572, h: 0.69, yaw: -0.95, tilt: 0, pitch: 0.14, o: 1, exact: true, move: { rocket: true } },
+    { sel: "#products", side: -1, y: 0.6, h: 0.24, yaw: -0.5, tilt: 0.2, o: 1, move: { trail: true } },
+    { sel: "#specs", side: -1, y: 0.64, h: 0.24, yaw: -0.5, tilt: 0.12, o: 1 },
+    // Away: off the bottom right of the screen, until the enquiry form.
+    { sel: "#services", side: 0, fx: 1.15, y: 1.45, h: 0.24, yaw: -0.5, tilt: 0, o: 0, move: { rocket: true, trail: true } },
+    { sel: "#sectors", side: 0, fx: 1.15, y: 1.45, h: 0.24, yaw: -0.5, tilt: 0, o: 0 },
+    { sel: "#equipment", side: 0, fx: 1.15, y: 1.45, h: 0.24, yaw: -0.5, tilt: 0, o: 0 },
+    { sel: "#why", side: 0, fx: 1.15, y: 1.45, h: 0.24, yaw: -0.5, tilt: 0, o: 0 },
+    // (moves under the left margin unseen, to rise back up there)
+    { sel: "#licence", side: -1, y: 1.45, h: 0.24, yaw: -0.5, tilt: 0.1, o: 0 },
+    { sel: "#contact", side: -1, y: 0.62, h: 0.24, yaw: -0.5, tilt: 0.1, o: 1 },
+    { sel: "footer", side: 1, y: 0.3, h: 0.34, yaw: -0.5, tilt: 0, o: 1, fx: 0.58, onPage: true, exact: true, move: { trail: true } }, // upright in the 24/7 band
   ] as Pose[]).map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
-  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, dir: 0, trail: 0 };
+  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0 };
   let lastY = window.scrollY;
   let lean = 0;
+  let speed = 0;
   const companionPose = (time: number) => {
     const mid = H * 0.5;
     let c = 0;
@@ -167,22 +176,30 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     pose.x = lerp(sx(cur), sx(next), t);
     pose.y = lerp(py(cur), py(next), t) + Math.sin(time * 0.7) * H * 0.012 * (1 - ex);
     pose.h = lerp(cur.h, next.h, t) * H;
-    pose.yaw = lerp(cur.yaw, next.yaw, t) + Math.sin(time * 0.25) * 0.6 * (1 - ex);
+    // Drifts idly up to the exploded view; from the products on it turns with
+    // the scroll instead (one turn every five screens or so).
+    const spin = Math.max(0, H - POSES[2].el!.getBoundingClientRect().top) / H * 1.2;
+    pose.yaw = lerp(cur.yaw, next.yaw, t) + (c === 0 ? Math.sin(time * 0.25) * 0.6 * (1 - ex) : spin);
     pose.pitch = lerp(cur.pitch ?? 0, next.pitch ?? 0, t);
     // While the exploded view holds the screen, it is the exploded model.
     const merged = c === 1 ? smooth(0.015, 0.05, shot.inside) * (1 - smooth(0.95, 0.985, shot.inside)) : 0;
-    pose.o = lerp(cur.o, next.o, t) * (1 - merged);
+    // Fading out it holds on until it is nearly off the screen.
+    pose.o = lerp(cur.o, next.o, next.o < cur.o ? t * t * t : t) * (1 - merged);
     // Leans into the scroll, a beat behind it.
     const vel = window.scrollY - lastY;
     lastY = window.scrollY;
     lean += (Math.max(-0.35, Math.min(0.35, vel * 0.004)) - lean) * 0.06;
+    speed += (Math.min(1, Math.abs(vel) / 3) - speed) * 0.15;
     pose.tilt = lerp(cur.tilt, next.tilt, t) + (Math.sin(time * 0.5) * 0.04 - lean) * (1 - ex);
-    // Crossing the page: every other move is a rocket boost, the rest leave a trail.
+    // Long moves: rocket and/or trail, as the pose it is heading for says.
     const dx = sx(next) - sx(cur);
-    pose.dir = Math.sign(dx);
-    const crossing = Math.abs(dx) > W * 0.2 && next !== cur ? Math.sin(Math.PI * t) : 0;
-    pose.rocket = c % 2 === 0 ? crossing : 0;
-    pose.trail = c % 2 === 1 ? crossing : 0;
+    const dy = py(next) - py(cur);
+    const len = Math.hypot(dx, dy) || 1;
+    pose.dx = dx / len;
+    pose.dy = dy / len;
+    const crossing = len > W * 0.2 && next !== cur ? Math.sin(Math.PI * t) : 0;
+    pose.rocket = next.move?.rocket ? crossing : 0;
+    pose.trail = next.move?.trail ? crossing * speed : 0;
   };
 
   /* Foam the companion leaves behind: flat white puffs on their own canvas,
@@ -193,7 +210,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   type Puff = { x: number; y: number; vx: number; vy: number; r0: number; r1: number; age: number; life: number };
   let puffs: Puff[] = [];
   let lastT = 0;
-  const foam = (time: number, nx: number, ny: number, rocket: number, trail: number, dir: number) => {
+  const foam = (time: number, nx: number, ny: number, rocket: number, trail: number) => {
     const dt = Math.min(1, lastT ? time - lastT : 0.016); // real time, so puffs clear even at low frame rates
     lastT = time;
     if (fx.width !== W || fx.height !== H) {
@@ -202,9 +219,13 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     }
     const R = (a: number, b: number) => a + Math.random() * (b - a);
     // Rocket: a hard jet out of the nozzle, opposite to the way it flies.
-    if (rocket > 0.15)
-      for (let i = 0; i < Math.round(rocket * 5); i++)
-        puffs.push({ x: nx + R(-3, 3), y: ny + R(-3, 3), vx: -dir * R(380, 720), vy: R(-60, 60), r0: R(3, 6), r1: R(16, 30), age: 0, life: R(0.5, 0.9) });
+    if (rocket * speed > 0.15)
+      for (let i = 0; i < Math.round(rocket * speed * 5); i++)
+        puffs.push((() => {
+          const v = R(380, 720);
+          const j = R(-60, 60);
+          return { x: nx + R(-3, 3), y: ny + R(-3, 3), vx: -pose.dx * v - pose.dy * j, vy: -pose.dy * v + pose.dx * j, r0: R(3, 6), r1: R(16, 30), age: 0, life: R(0.5, 0.9) };
+        })());
     // Trail: drips and splats left where it passed, sinking a little.
     if (trail > 0.12 && Math.random() < trail * 0.9)
       puffs.push({ x: nx + R(-6, 6), y: ny + R(-4, 4), vx: R(-20, 20), vy: R(20, 70), r0: R(4, 8), r1: R(9, 18), age: 0, life: R(1.2, 2) });
@@ -275,7 +296,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
       rig.scale.setScalar(lerp(scale, (pose.h * k) / HEIGHT, blend));
       rig.rotation.y = lerp(rig.rotation.y, pose.yaw, blend);
       // Rocketing, it lies over with its head toward where it is going.
-      const flying = lerp(pose.tilt, -pose.dir * Math.PI * 0.5, pose.rocket);
+      const flying = lerp(pose.tilt, Math.atan2(-pose.dx, -pose.dy), pose.rocket);
       rig.rotation.z = lerp(rig.rotation.z, flying, blend);
       rig.rotation.x = pose.pitch * blend;
       o = lerp(1, pose.o, blend);
@@ -283,7 +304,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     if (!companion && !fireOn && !heroOn) o = 0;
     canvas.style.opacity = o.toFixed(3);
     if (o < 0.01) {
-      if (puffs.length) foam(time, 0, 0, 0, 0, 0);
+      if (puffs.length) foam(time, 0, 0, 0, 0);
       return;
     }
 
@@ -325,7 +346,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const ny = (-v.y * 0.5 + 0.5) * H;
     shot.nozzle[0] = (nx - f.left) / Math.max(1, f.height);
     shot.nozzle[1] = (ny - f.top) / Math.max(1, f.height);
-    if (companion) foam(time, nx, ny, after > 0.95 ? pose.rocket : 0, after > 0.95 ? pose.trail : 0, pose.dir);
+    if (companion) foam(time, nx, ny, after > 0.95 ? pose.rocket : 0, after > 0.95 ? pose.trail : 0);
 
     fire.dataset.ground = !shot.live || s > 0.55 ? "light" : "dark";
     fire.style.setProperty("--hl", clamp01((s - 0.8) / 0.12).toFixed(3));

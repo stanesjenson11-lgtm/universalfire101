@@ -58,7 +58,7 @@
   --text-micro--line-height: 1.33;
 
   /* --- layout ---------------------------------------------------------- */
-  --breakpoint-bar: 52rem;
+  --breakpoint-bar: 62rem; /* where logo, all five links and the call button fit the pill */
   --breakpoint-wide: 64rem;
 
   --spacing-gutter: clamp(1.25rem, 5vw, 5rem);
@@ -72,6 +72,15 @@
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-apple: cubic-bezier(0.28, 0.11, 0.32, 1);
+}
+
+/* Phones: Kickstart's tighter rhythm — sections run on instead of floating
+   in white space. */
+@media (max-width: 760px) {
+  :root {
+    --spacing-section: 2.75rem;
+    --spacing-section-lg: 4.5rem;
+  }
 }
 
 /* Semantic z-index scale — never arbitrary values. */
@@ -477,7 +486,7 @@
 .uf-loader {
   animation: uf-loader-out 850ms var(--ease-out-expo) 2150ms both;
 }
-/* After the outline: the colours rise inside it from the bottom, a gauge filling. */
+/* After the outline: solid white rises inside it from the bottom, a gauge filling. */
 .uf-fill {
   clip-path: inset(100% 0 0 0);
   animation: uf-fill 950ms var(--ease-out-quart) 1050ms forwards;

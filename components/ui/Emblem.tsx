@@ -9,6 +9,8 @@ const GROW = "translate(100 102) scale(1.42) translate(-100 -102)";
  *  - "full": as on the old logo — ring lettering, gear, wheel, "FIRE".
  *  - "mark": for small sizes (the nav): no lettering, the gear enlarged, the
  *    ring drawn in the current text colour so it reads on black and on white.
+ *  - "mono": solid white on black, the preloader's fill (Kickstart's mark
+ *    fills in plain white under its outline, never in colour).
  */
 export default function Emblem({
   className = "",
@@ -17,7 +19,7 @@ export default function Emblem({
 }: {
   className?: string;
   title?: string;
-  variant?: "full" | "mark";
+  variant?: "full" | "mark" | "mono";
 }) {
   const arc = useId();
   const a11y = title ? { role: "img" as const } : { "aria-hidden": true as const };
@@ -33,6 +35,28 @@ export default function Emblem({
         <circle cx="100" cy="102" r="34" fill="#fff" stroke={K.navy} strokeWidth="6" />
         <path d={P.spokes} stroke={K.spoke} strokeWidth="2.6" strokeLinecap="round" transform={GROW} />
         <path d={P.flame} fill={K.red} transform={GROW} />
+      </svg>
+    );
+
+  if (variant === "mono")
+    return (
+      <svg viewBox="0 0 200 200" className={className} {...a11y}>
+        <circle cx="100" cy="100" r="94" fill="none" stroke="#fff" strokeWidth="6" />
+        <path d={P.band} fill="none" stroke="#fff" strokeWidth="1.6" />
+        <path id={arc} d={P.textArc} fill="none" />
+        <text fill="#fff" fontFamily="var(--font-display)" fontWeight="900" fontSize="31" letterSpacing="2">
+          <textPath href={`#${arc}`} startOffset="50%" textAnchor="middle">
+            UNIVERSAL
+          </textPath>
+        </text>
+        <path d={P.arrows} fill="#fff" stroke="#000" strokeWidth="2.5" />
+        <path d={P.gear} fill="#fff" stroke="#000" strokeWidth="2.5" />
+        <circle cx={P.hub.cx} cy={P.hub.cy} r={P.hub.r} fill="#000" stroke="#fff" strokeWidth="4" />
+        <path d={P.spokes} stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+        <path d={P.flame} fill="#fff" stroke="#000" strokeWidth="2" />
+        <text x="100" y="184" textAnchor="middle" fill="#fff" fontFamily="var(--font-display)" fontWeight="900" fontSize="30" letterSpacing="1">
+          FIRE
+        </text>
       </svg>
     );
 

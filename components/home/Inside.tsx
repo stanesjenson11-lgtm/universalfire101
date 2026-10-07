@@ -59,8 +59,9 @@ export default function Inside() {
   return (
     <section ref={section} id="inside" data-ground="dark" className="group on-black relative overflow-hidden">
       {/* The stage pins while the model comes apart; callouts live inside it. */}
-      <div className="relative h-svh min-h-[40rem] overflow-hidden max-[760px]:h-[78svh]">
-        <div ref={host} aria-hidden="true" className="absolute inset-0" />
+      <div className="relative h-svh min-h-[40rem] overflow-hidden">
+        {/* Phones: the model stands below the title instead of behind it. */}
+        <div ref={host} aria-hidden="true" className="absolute inset-0 max-[760px]:top-[clamp(15rem,36%,19rem)]" />
         <svg ref={svg} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full max-[760px]:hidden">
           <path fill="none" stroke="rgb(255 255 255 / 0.35)" strokeWidth="1" />
         </svg>
