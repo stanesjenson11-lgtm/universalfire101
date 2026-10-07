@@ -39,6 +39,7 @@ export default function Inside() {
                 callouts: Array.from(list.current!.children) as HTMLElement[],
               },
               prefersReduced(),
+              () => gone,
             ),
           )
           .then((s) => (gone ? s() : (stop = s)))

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { gsap, ScrollTrigger } from "@/lib/motion";
+import { shot } from "@/lib/shot";
 import { extinguisher, studioEnvironment, contactShadow, HEIGHT, AXIS_Z } from "./extinguisher3d";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -41,14 +42,17 @@ type Els = {
 
 /**
  * The exploded view of the real, scanned extinguisher — scrubbed by scroll,
- * one number p, so scrolling back reassembles it exactly:
- *   0.00–0.36  it turns into a three-quarter view
- *   0.12–0.40  a quarter of the cylinder is cut away: wall, powder, siphon tube
- *   0.38–0.82  the parts lift off along their own axes, callouts draw in
- *   0.75–1.00  a last quarter-turn while exploded
+ * one number p, so scrolling back reverses it exactly:
+ *   0.00–0.05  the drifting extinguisher (shot-stage) arrives and merges in
+ *   0.05–0.30  it turns into a three-quarter view
+ *   0.10–0.32  a quarter of the cylinder is cut away: wall, powder, siphon tube
+ *   0.32–0.60  the parts lift off along their own axes, callouts draw in
+ *   0.75–0.92  the parts come home, the cut closes
+ *   0.85–1.00  it turns back to where it began, and hands back to the drift
+ * Its progress goes out as shot.inside, so the hand-overs line up.
  * `still` renders the finished, exploded frame once (reduced motion).
  */
-export async function mountExploded({ section, host, svg, callouts, intro }: Els, still: boolean) {
+export async function mountExploded({ section, host, svg, callouts, intro }: Els, still: boolean, cancelled: () => boolean = () => false) {
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
@@ -66,6 +70,11 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
 
   const scene = new THREE.Scene();
   const [env, model] = await Promise.all([studioEnvironment(renderer), extinguisher({ ownMaterials: true })]);
+  if (cancelled()) {
+    renderer.dispose();
+    env.dispose();
+    return () => {};
+  }
   scene.environment = env;
   scene.environmentIntensity = 0.9;
 
@@ -146,9 +155,9 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
   const tmp = new THREE.Vector3();
   let W = 1;
   let H = 1;
-  const state = { p: still ? 0.9 : 0 };
+  const state = { p: still ? 0.5 : 0 };
 
-  const layoutCallouts = (p: number) => {
+  const layoutCallouts = (p: number, e: number) => {
     if (phone) return;
     type C = { el: HTMLElement; ax: number; ay: number; y: number; left: boolean; o: number };
     const all: C[] = groups.map((g, i) => {
@@ -160,7 +169,7 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
       tmp.project(camera);
       const ax = (tmp.x * 0.5 + 0.5) * W;
       const ay = (-tmp.y * 0.5 + 0.5) * H;
-      return { el: callouts[i], ax, ay, y: ay, left: ax < W / 2, o: smooth(0.46 + i * 0.02, 0.6 + i * 0.02, p) };
+      return { el: callouts[i], ax, ay, y: ay, left: ax < W / 2, o: smooth(0.42 + i * 0.015, 0.54 + i * 0.015, p) * smooth(0.6, 0.85, e) };
     });
     // Each column in order of height, at least 3.6rem apart, kept on screen.
     for (const left of [true, false]) {
@@ -180,18 +189,24 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     }
     const path = svg.firstElementChild as SVGPathElement;
     path.setAttribute("d", d);
-    path.style.opacity = smooth(0.46, 0.62, p).toFixed(3);
+    path.style.opacity = (smooth(0.42, 0.56, p) * smooth(0.6, 0.85, e)).toFixed(3);
   };
 
   const draw = () => {
     const p = state.p;
-    turn.rotation.y = lerp(-0.95, 0.35, inOut(smooth(0, 0.36, p))) + 0.4 * smooth(0.75, 1, p);
+    shot.inside = p;
+    // Arrives facing as the drifting extinguisher does (-0.95), turns to show
+    // the cut, and comes back round a full turn to the same pose to leave.
+    turn.rotation.y =
+      lerp(-0.95, 0.35, inOut(smooth(0.05, 0.3, p))) +
+      0.3 * smooth(0.55, 0.8, p) +
+      (Math.PI * 2 - 0.95 - 0.65) * inOut(smooth(0.85, 1, p));
 
-    const cut = inOut(smooth(0.12, 0.4, p));
+    const cut = inOut(smooth(0.1, 0.32, p)) * (1 - inOut(smooth(0.8, 0.94, p)));
     cutX.constant = lerp(1, 0, cut);
     cutZ.constant = lerp(1, 0, cut);
 
-    const e = smooth(0.38, 0.82, p);
+    const e = smooth(0.32, 0.6, p) * (1 - smooth(0.75, 0.92, p));
     for (const g of groups) {
       const t = inOut(clamp01((e - g.delay) / 0.7));
       g.meshes.forEach((m, i) => {
@@ -200,16 +215,17 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
       });
     }
 
-    const z = smooth(0.3, 0.82, p);
-    const dist = lerp(phone ? 2.4 : 2.05, phone ? 3.3 : 2.75, z);
-    const ty = lerp(0.07, 0.08, z);
+    const dist = lerp(phone ? 2.4 : 2.05, phone ? 3.3 : 2.75, e);
+    const ty = lerp(0.07, 0.08, e);
     camera.position.set(0, ty + dist * 0.14, dist);
     camera.lookAt(0, ty, 0);
     (shadow.material as THREE.MeshBasicMaterial).opacity = 1 - e * 0.7;
 
-    intro.style.opacity = (1 - smooth(0.36, 0.48, p)).toFixed(3);
+    // The hand-overs: this model is only shown between them.
+    canvas.style.opacity = still ? "1" : (smooth(0.015, 0.05, p) * (1 - smooth(0.95, 0.985, p))).toFixed(3);
+    intro.style.opacity = (1 - smooth(0.3, 0.4, p)).toFixed(3);
     renderer.render(scene, camera);
-    layoutCallouts(p);
+    layoutCallouts(p, e);
   };
 
   const resize = () => {
@@ -235,7 +251,7 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
         ease: "none",
         onUpdate: draw,
         // The stage pins, not the section: on phones the parts list sits below it.
-        scrollTrigger: { trigger: stage, start: "top top", end: phone ? "+=240%" : "+=360%", pin: stage, scrub: 0.6 },
+        scrollTrigger: { trigger: stage, start: "top top", end: phone ? "+=300%" : "+=440%", pin: stage, scrub: 0.6 },
       });
     }, section);
   }

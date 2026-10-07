@@ -11,6 +11,8 @@ export const shot = {
   nozzle: [1.5, 0.9] as [number, number],
   /** Which way the raised nozzle points on screen (unit vector, y down). */
   nozzleDir: [-1, 0] as [number, number],
+  /** 0 → 1: progress through the exploded view (components/gl/exploded.ts). */
+  inside: 0,
   /** Set when the fire canvas has a working WebGL context. */
   live: false,
 };

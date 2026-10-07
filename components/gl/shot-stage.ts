@@ -33,7 +33,7 @@ type Els = {
  * Two scrubbed tweens over plain numbers, so scrolling back reverses it all.
  * Under reduced motion the model just stands in the hero (no tweens).
  */
-export async function mountShotStage({ stage, hero, fire, home, land }: Els, still: boolean) {
+export async function mountShotStage({ stage, hero, fire, home, land }: Els, still: boolean, cancelled: () => boolean = () => false) {
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
@@ -50,6 +50,13 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
 
   const scene = new THREE.Scene();
   const [env, model] = await Promise.all([studioEnvironment(renderer), extinguisher()]);
+  // Superseded while loading (a remount): build nothing — a second set of
+  // pins on the same sections would fight this one's.
+  if (cancelled()) {
+    renderer.dispose();
+    env.dispose();
+    return () => {};
+  }
   scene.environment = env;
   scene.environmentIntensity = 0.85;
 
@@ -109,14 +116,24 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
    * Companion: after the fire it keeps you company down the page, drifting in
    * the margin beside each section — gsap.com/scroll's props, but this one is
    * the product. One pose per section (side of the screen, height, size,
-   * facing, lean); it eases from pose to pose as each section passes, steps
-   * out for the exploded view, and ends standing upright by the footer.
+   * facing, lean); it eases from pose to pose as each section passes.
+   *  - At "Inside every extinguisher" it flies to the centre at exactly the
+   *    size, angle and tilt the exploded view starts from, and the two models
+   *    cross-fade (shot.inside): it merges in, and comes back out the same way.
+   *  - Crossing the page it alternates between leaving a residue of foam
+   *    behind it and tipping over to rocket across on a jet from its nozzle.
+   *  - It ends standing upright in the footer's 24/7 band.
    * Only where the margins are wide enough to hold it.
    */
   const companion = !still && window.matchMedia("(min-width: 1280px)").matches;
-  const POSES = [
+  type Pose = {
+    sel: string; side: number; y: number; h: number; yaw: number; tilt: number; o: number;
+    fx?: number; onPage?: boolean; exact?: boolean; pitch?: number; el?: HTMLElement | null;
+  };
+  const POSES = ([
     { sel: "#about", side: 1, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 1 },
-    { sel: "#inside", side: 1, y: 0.6, h: 0.22, yaw: 1.5, tilt: -0.3, o: 0 },
+    // The exploded view's opening frame: centred, 69% of the screen, facing -0.95.
+    { sel: "#inside", side: 0, fx: 0.5, y: 0.572, h: 0.69, yaw: -0.95, tilt: 0, pitch: 0.14, o: 1, exact: true },
     { sel: "#products", side: -1, y: 0.6, h: 0.24, yaw: -0.5, tilt: 0.2, o: 1 },
     { sel: "#specs", side: 1, y: 0.68, h: 0.24, yaw: 1.4, tilt: -0.12, o: 1 },
     { sel: "#services", side: -1, y: 0.5, h: 0.24, yaw: 2.3, tilt: 0.28, o: 1 },
@@ -125,9 +142,9 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     { sel: "#why", side: 1, y: 0.58, h: 0.24, yaw: 4.6, tilt: -0.2, o: 1 },
     { sel: "#licence", side: -1, y: 0.6, h: 0.24, yaw: 5.4, tilt: 0.24, o: 1 },
     { sel: "#contact", side: -1, y: 0.62, h: 0.24, yaw: 6.0, tilt: 0.1, o: 1 },
-    { sel: "footer", side: 1, y: 0.3, h: 0.34, yaw: 6.6, tilt: 0, o: 1, fx: 0.58, onPage: true }, // upright in the 24/7 band, scrolls away with it
-  ].map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
-  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, o: 0 };
+    { sel: "footer", side: 1, y: 0.3, h: 0.34, yaw: 6.6, tilt: 0, o: 1, fx: 0.58, onPage: true, exact: true }, // upright in the 24/7 band
+  ] as Pose[]).map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
+  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, dir: 0, trail: 0 };
   let lastY = window.scrollY;
   let lean = 0;
   const companionPose = (time: number) => {
@@ -142,20 +159,73 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const t = inOut(clamp01((H - nextTop) / (H - mid)));
     // In the middle of the margin beside the 72rem content column.
     const margin = Math.max(56, (W - 1152) / 4);
-    const sx = (p: (typeof POSES)[number]) => ("fx" in p ? W * (p.fx as number) : p.side > 0 ? W - margin : margin);
+    const sx = (p: Pose) => (p.fx !== undefined ? W * p.fx : p.side > 0 ? W - margin : margin);
+    // onPage poses sit on their section (y from its top) and scroll with it.
+    const py = (p: Pose) => (p.onPage ? p.el!.getBoundingClientRect().top + p.y * H : p.y * H);
+    // Exact poses (the hand-over, the finale) get no idle drift.
+    const ex = lerp(cur.exact ? 1 : 0, next.exact ? 1 : 0, t);
     pose.x = lerp(sx(cur), sx(next), t);
-    // Poses marked onPage sit on their section (y from its top) and scroll
-    // with it; the rest hold their place on screen.
-    const py = (p: (typeof POSES)[number]) => ("onPage" in p ? p.el!.getBoundingClientRect().top + p.y * H : p.y * H);
-    pose.y = lerp(py(cur), py(next), t) + Math.sin(time * 0.7) * H * 0.012;
+    pose.y = lerp(py(cur), py(next), t) + Math.sin(time * 0.7) * H * 0.012 * (1 - ex);
     pose.h = lerp(cur.h, next.h, t) * H;
-    pose.yaw = lerp(cur.yaw, next.yaw, t) + time * 0.12;
-    pose.o = lerp(cur.o, next.o, t);
+    pose.yaw = lerp(cur.yaw, next.yaw, t) + Math.sin(time * 0.25) * 0.6 * (1 - ex);
+    pose.pitch = lerp(cur.pitch ?? 0, next.pitch ?? 0, t);
+    // While the exploded view holds the screen, it is the exploded model.
+    const merged = c === 1 ? smooth(0.015, 0.05, shot.inside) * (1 - smooth(0.95, 0.985, shot.inside)) : 0;
+    pose.o = lerp(cur.o, next.o, t) * (1 - merged);
     // Leans into the scroll, a beat behind it.
     const vel = window.scrollY - lastY;
     lastY = window.scrollY;
     lean += (Math.max(-0.35, Math.min(0.35, vel * 0.004)) - lean) * 0.06;
-    pose.tilt = lerp(cur.tilt, next.tilt, t) + Math.sin(time * 0.5) * 0.04 - lean;
+    pose.tilt = lerp(cur.tilt, next.tilt, t) + (Math.sin(time * 0.5) * 0.04 - lean) * (1 - ex);
+    // Crossing the page: every other move is a rocket boost, the rest leave a trail.
+    const dx = sx(next) - sx(cur);
+    pose.dir = Math.sign(dx);
+    const crossing = Math.abs(dx) > W * 0.2 && next !== cur ? Math.sin(Math.PI * t) : 0;
+    pose.rocket = c % 2 === 0 ? crossing : 0;
+    pose.trail = c % 2 === 1 ? crossing : 0;
+  };
+
+  /* Foam the companion leaves behind: flat white puffs on their own canvas,
+     under the 3D one so the extinguisher sits in front of its own jet. */
+  const fx = document.createElement("canvas");
+  fx.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
+  const g2 = fx.getContext("2d")!;
+  type Puff = { x: number; y: number; vx: number; vy: number; r0: number; r1: number; age: number; life: number };
+  let puffs: Puff[] = [];
+  let lastT = 0;
+  const foam = (time: number, nx: number, ny: number, rocket: number, trail: number, dir: number) => {
+    const dt = Math.min(1, lastT ? time - lastT : 0.016); // real time, so puffs clear even at low frame rates
+    lastT = time;
+    if (fx.width !== W || fx.height !== H) {
+      fx.width = W;
+      fx.height = H;
+    }
+    const R = (a: number, b: number) => a + Math.random() * (b - a);
+    // Rocket: a hard jet out of the nozzle, opposite to the way it flies.
+    if (rocket > 0.15)
+      for (let i = 0; i < Math.round(rocket * 5); i++)
+        puffs.push({ x: nx + R(-3, 3), y: ny + R(-3, 3), vx: -dir * R(380, 720), vy: R(-60, 60), r0: R(3, 6), r1: R(16, 30), age: 0, life: R(0.5, 0.9) });
+    // Trail: drips and splats left where it passed, sinking a little.
+    if (trail > 0.12 && Math.random() < trail * 0.9)
+      puffs.push({ x: nx + R(-6, 6), y: ny + R(-4, 4), vx: R(-20, 20), vy: R(20, 70), r0: R(4, 8), r1: R(9, 18), age: 0, life: R(1.2, 2) });
+    g2.clearRect(0, 0, W, H);
+    puffs = puffs.filter((p) => (p.age += dt) < p.life);
+    for (const p of puffs) {
+      const u = p.age / p.life;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.94;
+      p.vy = p.vy * 0.96 + 30 * dt;
+      const r = p.r0 + (p.r1 - p.r0) * (1 - (1 - u) * (1 - u));
+      const a = 1 - u * u;
+      g2.beginPath();
+      g2.arc(p.x, p.y, r, 0, Math.PI * 2);
+      g2.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`;
+      g2.fill();
+      g2.lineWidth = 1;
+      g2.strokeStyle = `rgba(110,110,120,${(a * 0.35).toFixed(3)})`; // so it reads on white too
+      g2.stroke();
+    }
   };
 
   const apply = (time: number) => {
@@ -204,12 +274,18 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
       rig.position.lerp(target, blend);
       rig.scale.setScalar(lerp(scale, (pose.h * k) / HEIGHT, blend));
       rig.rotation.y = lerp(rig.rotation.y, pose.yaw, blend);
-      rig.rotation.z = lerp(rig.rotation.z, pose.tilt, blend);
+      // Rocketing, it lies over with its head toward where it is going.
+      const flying = lerp(pose.tilt, -pose.dir * Math.PI * 0.5, pose.rocket);
+      rig.rotation.z = lerp(rig.rotation.z, flying, blend);
+      rig.rotation.x = pose.pitch * blend;
       o = lerp(1, pose.o, blend);
     }
     if (!companion && !fireOn && !heroOn) o = 0;
     canvas.style.opacity = o.toFixed(3);
-    if (o < 0.01) return;
+    if (o < 0.01) {
+      if (puffs.length) foam(time, 0, 0, 0, 0, 0);
+      return;
+    }
 
     // The discharge: the pin comes out first, then the body kicks with it.
     const pulled = smooth(0.0, 0.05, s);
@@ -249,6 +325,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const ny = (-v.y * 0.5 + 0.5) * H;
     shot.nozzle[0] = (nx - f.left) / Math.max(1, f.height);
     shot.nozzle[1] = (ny - f.top) / Math.max(1, f.height);
+    if (companion) foam(time, nx, ny, after > 0.95 ? pose.rocket : 0, after > 0.95 ? pose.trail : 0, pose.dir);
 
     fire.dataset.ground = !shot.live || s > 0.55 ? "light" : "dark";
     fire.style.setProperty("--hl", clamp01((s - 0.8) / 0.12).toFixed(3));
@@ -256,6 +333,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   };
 
   const tick = () => apply(performance.now() / 1000);
+  stage.appendChild(fx);
   stage.appendChild(canvas);
   document.documentElement.classList.add("ext-live");
 
@@ -293,6 +371,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     renderer.dispose();
     env.dispose();
     canvas.remove();
+    fx.remove();
     document.documentElement.classList.remove("ext-live");
     shot.spray = 0;
   };

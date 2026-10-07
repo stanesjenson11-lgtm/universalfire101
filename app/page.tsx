@@ -5,6 +5,7 @@ import ShotStage from "@/components/home/ShotStage";
 import Inside from "@/components/home/Inside";
 import { About, Products, Specs, Services, Sectors, Equipment, Why, Licence, Contact } from "@/components/home/Sections";
 import Details from "@/components/Detail";
+import ScrubMarks from "@/components/ui/ScrubMarks";
 
 /** The whole site: one scroll, apple.com rhythm of black and white. */
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
       <Licence />
       <Contact />
       <Details />
+      <ScrubMarks />
     </>
   );
 }

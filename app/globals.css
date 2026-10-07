@@ -475,7 +475,17 @@
    ========================================================================== */
 
 .uf-loader {
-  animation: uf-loader-out 850ms var(--ease-out-expo) 1650ms both;
+  animation: uf-loader-out 850ms var(--ease-out-expo) 2150ms both;
+}
+/* After the outline: the colours rise inside it from the bottom, a gauge filling. */
+.uf-fill {
+  clip-path: inset(100% 0 0 0);
+  animation: uf-fill 950ms var(--ease-out-quart) 1050ms forwards;
+}
+@keyframes uf-fill {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 /* Each line draws from nothing (pathLength = 1), staggered by its own delay. */
 .uf-draw {

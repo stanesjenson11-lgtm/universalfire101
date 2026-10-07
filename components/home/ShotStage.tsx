@@ -24,9 +24,9 @@ export default function ShotStage() {
     let stop = () => {};
     let gone = false;
     import("@/components/gl/shot-stage")
-      .then(({ mountShotStage }) => mountShotStage(els as Record<keyof typeof els, HTMLElement>, prefersReduced()))
+      .then(({ mountShotStage }) => mountShotStage(els as Record<keyof typeof els, HTMLElement>, prefersReduced(), () => gone))
       .then((s) => (gone ? s() : (stop = s)))
-      .catch(() => {});
+      .catch((e) => console.error("[shot-stage]", e));
     return () => {
       gone = true;
       stop();

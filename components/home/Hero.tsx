@@ -4,9 +4,9 @@ import CityScene from "./CityScene";
 
 /**
  * The hero: a city at night where fires keep breaking out and firemen keep
- * putting them out (CityScene), the line set large above it, and the real 3D
- * extinguisher (ShotStage) standing on the street in the box marked
- * data-ext="home" — scrolling sends it down into the fire.
+ * putting them out (CityScene), the line set large above it. The real 3D
+ * extinguisher (ShotStage) hangs from the hand of the fireman in front —
+ * CityScene marks it data-ext="home" — and scrolling sends it down into the fire.
  */
 export default function Hero() {
   return (
@@ -14,8 +14,8 @@ export default function Hero() {
       <CityScene />
       <div className="relative z-[var(--z-content)] mx-auto max-w-[80rem] px-gutter pt-[clamp(6.5rem,15vh,9.5rem)]">
         <h1 className="text-hero font-semibold">
-          <RandomLetterSwapPingPong label={home.hero.lines[0]} autoPlayDelay={2300} />
-          <RandomLetterSwapPingPong label={home.hero.lines[1]} autoPlayDelay={2480} />
+          <RandomLetterSwapPingPong label={home.hero.lines[0]} autoPlayDelay={2750} />
+          <RandomLetterSwapPingPong label={home.hero.lines[1]} autoPlayDelay={2930} />
         </h1>
         <p className="mt-5 max-w-[34ch] text-lead text-muted-dark">{home.hero.support}</p>
         <div className="mt-7 flex flex-wrap gap-3">
@@ -27,12 +27,6 @@ export default function Hero() {
           </a>
         </div>
       </div>
-      {/* Where the extinguisher stands, on the street: the 3D stage measures this box. */}
-      <div
-        data-ext="home"
-        aria-hidden="true"
-        className="absolute right-[9vw] bottom-[4.5%] h-[50svh] w-[13vw] max-[620px]:right-[5vw] max-[620px]:h-[30svh] max-[620px]:w-[24vw]"
-      />
     </section>
   );
 }

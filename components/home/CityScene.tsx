@@ -119,6 +119,44 @@ function Fireman({ dir }: { dir: number }) {
   );
 }
 
+/*
+ * The fireman in front, holding the real (3D) extinguisher at his side. His
+ * arm hangs 55° forward; the extinguisher hangs from his hand to just off the
+ * street. The rect at his hand is the 3D stage's home anchor (data-ext="home"),
+ * so the extinguisher it draws leaves from his grip when you scroll.
+ */
+const HOLDER = { x: 990, scale: 2.4, arm: 55 };
+const HAND = (() => {
+  const a = (HOLDER.arm * Math.PI) / 180;
+  const lx = SHOULDER.x + Math.cos(a) * 14;
+  const ly = SHOULDER.y + Math.sin(a) * 14;
+  return { x: HOLDER.x - lx * HOLDER.scale, y: STREET + ly * HOLDER.scale };
+})();
+
+function Holder() {
+  return (
+    <g transform={`translate(${HOLDER.x} ${STREET}) scale(${-HOLDER.scale} ${HOLDER.scale})`}>
+      <ellipse cy="1" rx="13" ry="3" fill="#000" opacity="0.5" />
+      <rect x="-9" y="-7" width="8" height="7" rx="1.5" fill="#0c0c0d" />
+      <rect x="1" y="-7" width="8" height="7" rx="1.5" fill="#0c0c0d" />
+      <rect x="-8" y="-30" width="7" height="24" fill="#2a2a30" />
+      <rect x="1" y="-30" width="7" height="24" fill="#2a2a30" />
+      <rect x="-8" y="-17" width="16" height="2.2" fill="#e8e6d8" />
+      <rect x="-11" y="-58" width="22" height="31" rx="5" fill="#c49a5a" />
+      <rect x="-11" y="-42" width="22" height="2.6" fill="#f4f0d0" />
+      <rect x="-11" y="-35" width="22" height="2.6" fill="#f4f0d0" />
+      <circle cy="-66" r="7.5" fill="#e6b58c" />
+      <path d="M-10-67Q-10-80 0-80Q10-80 10-67Z" fill="#c2410c" />
+      <rect x="-12.5" y="-68" width="25" height="3.2" rx="1.6" fill="#9a3412" />
+      <circle cx="4" cy="-73" r="1.8" fill="#f2c230" />
+      <g transform={`translate(${SHOULDER.x} ${SHOULDER.y}) rotate(${HOLDER.arm})`}>
+        <rect x="-1" y="-3" width="15" height="6" rx="3" fill="#b38a4f" />
+        <circle cx="14" r="3.6" fill="#e6b58c" />
+      </g>
+    </g>
+  );
+}
+
 export default function CityScene() {
   const root = useRef<SVGSVGElement>(null);
 
@@ -276,6 +314,10 @@ export default function CityScene() {
           <Fireman dir={m.dir} />
         </g>
       ))}
+
+      <Holder />
+      {/* The extinguisher in his hand: top just above the grip, foot just off the street. */}
+      <rect data-ext="home" x={r1(HAND.x - 24)} y={r1(HAND.y - 10)} width="48" height="112" fill="none" />
     </svg>
   );
 }
