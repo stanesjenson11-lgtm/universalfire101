@@ -55,8 +55,9 @@ function useLock() {
  * About opens on "Our profile". Desktop: one screen that locks — all the copy
  * as one justified flow over two columns (so they balance and end on the same
  * line), its two notes headed by run-in heads, and the managing partner's
- * portrait beside it, as tall as it (under the heading on phones). "Protecting Tamil Nadu" follows as its own beat,
- * the lead-in to the exploded view.
+ * portrait beside the text, as tall as it (under the heading on phones).
+ * "Protecting Tamil Nadu" follows as its own beat, the lead-in to the
+ * exploded view.
  */
 const para = "mb-4 wide:mb-[clamp(0.5rem,1.6svh,0.875rem)]";
 
@@ -72,8 +73,8 @@ export function About() {
           <Headline className="wide:col-span-9">{prose[0].heading!}</Headline>
 
           {/* Beside the copy and as tall as it: the photo's top level with the
-              heading, the name level with the last line of text. */}
-          <figure className="flex flex-col wide:col-span-3 wide:row-span-2">
+              first line, the name level with the last. */}
+          <figure className="flex flex-col wide:col-span-3 wide:col-start-10 wide:row-start-2">
             <div className="card relative aspect-[4/5] max-w-[22rem] overflow-hidden bg-paper wide:aspect-auto wide:min-h-0 wide:max-w-none wide:flex-1">
               <Image src={person.image.src} alt={person.image.alt} fill sizes="(min-width: 1024px) 17rem, 22rem" className="object-cover object-[50%_25%]" />
             </div>

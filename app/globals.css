@@ -576,6 +576,7 @@
 /* The shutter: the black lifts while what is on it holds still (a counter-
    move), so its bottom edge wipes up over the emblem. */
 .uf-loader {
+  visibility: visible; /* over <main>'s, which hides the page under it (below) */
   animation: uf-lift 600ms cubic-bezier(0.7, 0, 0.2, 1) 1250ms both;
 }
 .uf-loader > * {
@@ -616,6 +617,35 @@
 }
 .uf-sweep-b {
   animation: uf-sweep 380ms cubic-bezier(0.5, 1, 0.89, 1) 380ms both;
+}
+/* Each half hides the moment its turn is done (no hairline on the seam). */
+.uf-half-a {
+  animation: uf-gone 1ms 380ms forwards;
+}
+.uf-half-b {
+  animation: uf-gone 1ms 760ms forwards;
+}
+@keyframes uf-gone {
+  to {
+    opacity: 0;
+  }
+}
+/* The page under the loader stays unpainted (laid out, so every scroll
+   position is right) until the fill is done: otherwise the GPU rasterises the
+   hero — its animated city, the web-font swap — under the black, and the
+   needle hitches. It paints in the beat before the shutter lifts. */
+@media (prefers-reduced-motion: no-preference) {
+  body:has(.uf-loader) :is(body > header, main, body > footer) {
+    animation: uf-unveil 1ms 1150ms both;
+  }
+}
+@keyframes uf-unveil {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
 }
 /* The second half's needle waits for its turn (it sits on show at 6 o'clock). */
 .uf-needle-b {

@@ -21,13 +21,14 @@ export function prefersReduced(): boolean {
 }
 
 /**
- * Resolves once the preloader's needle has swept round — at once if there is
- * no preloader. The 3D's heavy GPU work (texture uploads, shader compiles)
- * waits for it, so it never competes with the sweep for frames.
+ * Resolves once the preloader has lifted — at once if there is none. Every
+ * WebGL start-up (shader compiles, texture uploads) waits for it: they tie up
+ * the GPU, and even the preloader's compositor-only animation needs the GPU
+ * to draw its frames.
  */
-export function loaderDrawn(): Promise<void> {
-  const drawing = document.getAnimations().filter((a) => (a as CSSAnimation).animationName === "uf-sweep");
-  return Promise.all(drawing.map((a) => a.finished.catch(() => {}))).then(() => {});
+export function loaderDone(): Promise<void> {
+  const lift = document.getAnimations().filter((a) => (a as CSSAnimation).animationName === "uf-lift");
+  return Promise.all(lift.map((a) => a.finished.catch(() => {}))).then(() => {});
 }
 
 /**

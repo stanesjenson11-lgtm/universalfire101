@@ -16,14 +16,15 @@ export default function Loader() {
             <Emblem variant="mono" className="h-full w-full" />
           </div>
           <EmblemSkeleton className="absolute inset-0 h-full w-full" />
-          {/* The needle rides the edge of each half as it turns away; at the
-              hand-over and the end it turns into its half's clip, unseen. */}
-          <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden">
+          {/* The needle rides the edge of each half as it turns away. Each half
+              then hides: its cover and needle end on the clip edge, where
+              antialiasing would leave a hairline through the emblem. */}
+          <div className="uf-half-a absolute inset-y-0 right-0 w-1/2 overflow-hidden">
             <div className="uf-sweep-a relative h-full w-full origin-left bg-black">
               <i className="absolute top-0 left-0 h-1/2 w-[1.5px] bg-white" />
             </div>
           </div>
-          <div className="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
+          <div className="uf-half-b absolute inset-y-0 left-0 w-1/2 overflow-hidden">
             <div className="uf-sweep-b relative h-full w-full origin-right bg-black">
               <i className="uf-needle-b absolute right-0 bottom-0 h-1/2 w-[1.5px] bg-white" />
             </div>
