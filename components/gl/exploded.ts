@@ -255,7 +255,9 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
         ease: "none",
         onUpdate: draw,
         // The stage pins, not the section: on phones the parts list sits below it.
-        scrollTrigger: { trigger: stage, start: "top top", end: phone ? "+=300%" : "+=440%", pin: stage, scrub: 0.6 },
+        // Locked to the scroll (no easing behind it), like the drifting model,
+        // so the two stay in step through the hand-overs at any scroll speed.
+        scrollTrigger: { trigger: stage, start: "top top", end: phone ? "+=300%" : "+=440%", pin: stage, scrub: true },
       });
     }, section);
   }

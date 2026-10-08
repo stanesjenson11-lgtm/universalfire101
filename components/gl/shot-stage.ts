@@ -31,6 +31,8 @@ type Els = {
  * shot.nozzleDir) — and smothers the fire, spreading out from where it lands.
  *
  * Two scrubbed tweens over plain numbers, so scrolling back reverses it all.
+ * Both are locked to the scroll position (Lenis already smooths it), never
+ * eased behind it: a fast scroll and a slow one show the same frames.
  * Under reduced motion the model just stands in the hero (no tweens).
  */
 export async function mountShotStage({ stage, hero, fire, home, land }: Els, still: boolean, cancelled: () => boolean = () => false) {
@@ -136,7 +138,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
    *    dripping foam, and comes back up for "Send an enquiry".
    *  - Its long moves are a rocket boost (lying over toward where it is going
    *    on a jet of foam), a trail of foam residue, or both; only while you
-   *    are actually scrolling.
+   *    are actually scrolling, and as much foam per pixel at any speed.
    *  - It ends standing upright in the footer's 24/7 band.
    * Only where the margins are wide enough to hold it.
    */
@@ -165,8 +167,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   ] as Pose[]).map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
   const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0, ins: 0 };
   let lastY = window.scrollY;
-  let lean = 0;
-  let speed = 0;
+  let moved = 0; // px scrolled since the last frame
   const companionPose = (time: number) => {
     const mid = H * 0.5;
     let c = 0;
@@ -199,12 +200,9 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const merged = c === 1 ? smooth(0.006, 0.05, shot.inside) * (1 - smooth(0.95, 0.99, shot.inside)) : 0;
     // Fading out it holds on until it is nearly off the screen.
     pose.o = lerp(cur.o, next.o, next.o < cur.o ? t * t * t : t) * (1 - merged);
-    // Leans into the scroll, a beat behind it.
-    const vel = window.scrollY - lastY;
+    moved = Math.abs(window.scrollY - lastY);
     lastY = window.scrollY;
-    lean += (Math.max(-0.35, Math.min(0.35, vel * 0.004)) - lean) * 0.06;
-    speed += (Math.min(1, Math.abs(vel) / 3) - speed) * 0.15;
-    pose.tilt = lerp(cur.tilt, next.tilt, t) + (Math.sin(time * 0.5) * 0.04 - lean) * (1 - ex);
+    pose.tilt = lerp(cur.tilt, next.tilt, t) + Math.sin(time * 0.5) * 0.04 * (1 - ex);
     // Long moves: rocket and/or trail, as the pose it is heading for says.
     const dx = sx(next) - sx(cur);
     const dy = py(next) - py(cur);
@@ -213,7 +211,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     pose.dy = dy / len;
     const crossing = len > W * 0.2 && next !== cur ? Math.sin(Math.PI * t) : 0;
     pose.rocket = next.move?.rocket ? crossing : 0;
-    pose.trail = next.move?.trail ? crossing * speed : 0;
+    pose.trail = next.move?.trail ? crossing : 0;
   };
 
   /* Foam the companion leaves behind: flat white puffs on their own canvas,
@@ -224,6 +222,10 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   type Puff = { x: number; y: number; vx: number; vy: number; r0: number; r1: number; age: number; life: number };
   let puffs: Puff[] = [];
   let lastT = 0;
+  let lastNx = NaN;
+  let lastNy = NaN;
+  let owed = 0; // scrolled px not yet paid out in puffs
+  const STEP = 7; // px of scroll per puff position
   const foam = (time: number, nx: number, ny: number, rocket: number, trail: number) => {
     const dt = Math.min(1, lastT ? time - lastT : 0.016); // real time, so puffs clear even at low frame rates
     lastT = time;
@@ -231,26 +233,47 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
       fx.width = W;
       fx.height = H;
     }
+    if (Number.isNaN(lastNx)) [lastNx, lastNy] = [nx, ny];
+    // Foam lives on scroll distance, not the clock (900px of scroll ≈ 1s): a
+    // slow scroll and a fast one leave the same jet and trail. Still, it
+    // drains at half speed by the clock so it always clears.
+    const tau = Math.min(0.25, Math.max(dt * 0.5, moved / 900));
     const R = (a: number, b: number) => a + Math.random() * (b - a);
-    // Rocket: a hard jet out of the nozzle, opposite to the way it flies.
-    if (rocket * speed > 0.15)
-      for (let i = 0; i < Math.round(rocket * speed * 5); i++)
-        puffs.push((() => {
+    // Paid out per distance scrolled and spread along the nozzle's path since
+    // the last frame (aged to match), so a fast scroll leaves the same
+    // unbroken jet and trail as a slow one; none while the page is still.
+    owed = rocket > 0.15 || trail > 0.12 ? owed + moved : 0;
+    const n = Math.min(48, Math.floor(owed / STEP));
+    owed -= n * STEP;
+    for (let i = 1; i <= n; i++) {
+      const u = i / n;
+      const x = lerp(lastNx, nx, u);
+      const y = lerp(lastNy, ny, u);
+      const age = (1 - u) * tau;
+      // Rocket: a hard jet out of the nozzle, opposite to the way it flies.
+      if (rocket > 0.15)
+        for (let k = 0; k < Math.round(rocket * 2); k++) {
           const v = R(380, 720);
           const j = R(-60, 60);
-          return { x: nx + R(-3, 3), y: ny + R(-3, 3), vx: -pose.dx * v - pose.dy * j, vy: -pose.dy * v + pose.dx * j, r0: R(3, 6), r1: R(16, 30), age: 0, life: R(0.5, 0.9) };
-        })());
-    // Trail: drips and splats left where it passed, sinking a little.
-    if (trail > 0.12 && Math.random() < trail * 0.9)
-      puffs.push({ x: nx + R(-6, 6), y: ny + R(-4, 4), vx: R(-20, 20), vy: R(20, 70), r0: R(4, 8), r1: R(9, 18), age: 0, life: R(1.2, 2) });
+          puffs.push({ x: x + R(-3, 3), y: y + R(-3, 3), vx: -pose.dx * v - pose.dy * j, vy: -pose.dy * v + pose.dx * j, r0: R(3, 6), r1: R(16, 30), age, life: R(0.5, 0.9) });
+        }
+      // Trail: drips and splats left where it passed, sinking a little.
+      if (trail > 0.12 && Math.random() < trail * 0.45)
+        puffs.push({ x: x + R(-6, 6), y: y + R(-4, 4), vx: R(-20, 20), vy: R(20, 70), r0: R(4, 8), r1: R(9, 18), age, life: R(1.2, 2) });
+    }
+    lastNx = nx;
+    lastNy = ny;
     g2.clearRect(0, 0, W, H);
-    puffs = puffs.filter((p) => (p.age += dt) < p.life);
+    puffs = puffs.filter((p) => (p.age += tau) < p.life);
+    // Drag per unit of that time, not per frame: the same at 60 and 120 Hz.
+    const drag = Math.pow(0.94, tau * 60);
+    const sink = Math.pow(0.96, tau * 60);
     for (const p of puffs) {
       const u = p.age / p.life;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.vx *= 0.94;
-      p.vy = p.vy * 0.96 + 30 * dt;
+      p.x += p.vx * tau;
+      p.y += p.vy * tau;
+      p.vx *= drag;
+      p.vy = p.vy * sink + 30 * tau;
       const r = p.r0 + (p.r1 - p.r0) * (1 - (1 - u) * (1 - u));
       const a = 1 - u * u;
       g2.beginPath();
@@ -318,7 +341,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     if (!companion && !fireOn && !heroOn) o = 0;
     canvas.style.opacity = o.toFixed(3);
     if (o < 0.01) {
-      if (puffs.length) foam(time, 0, 0, 0, 0);
+      if (puffs.length) foam(time, lastNx, lastNy, 0, 0);
       return;
     }
 
@@ -385,14 +408,14 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
       gsap.to(state, {
         r: 1,
         ease: "none",
-        scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: 0.7 },
+        scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: true },
       });
       if (shot.live) {
         gsap.to(state, {
           s: 1,
           ease: "none",
           onUpdate: () => void (shot.spray = state.s),
-          scrollTrigger: { trigger: fire, start: "top top", end: phone ? "+=170%" : "+=240%", pin: true, scrub: 0.7 },
+          scrollTrigger: { trigger: fire, start: "top top", end: phone ? "+=170%" : "+=240%", pin: true, scrub: true },
         });
       } else {
         state.s = shot.spray = 1;

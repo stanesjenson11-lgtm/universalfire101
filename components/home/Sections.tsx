@@ -254,7 +254,7 @@ export function Sectors() {
         // The section is one screen (frame): it holds as it fills it.
         start: pinStart(self),
         end: () => `+=${dist()}`,
-        scrub: 0.6,
+        scrub: true, // on the scroll, not eased behind it: the same at any speed
         invalidateOnRefresh: true,
       },
     });
@@ -330,7 +330,6 @@ export function Equipment() {
           showPath
           responsive
           baseVelocity={4}
-          useScrollVelocity
           slowdownOnHover
           repeat={1}
           enableRollingZIndex={false}

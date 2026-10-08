@@ -21,6 +21,16 @@ export function prefersReduced(): boolean {
 }
 
 /**
+ * Resolves once the preloader's needle has swept round — at once if there is
+ * no preloader. The 3D's heavy GPU work (texture uploads, shader compiles)
+ * waits for it, so it never competes with the sweep for frames.
+ */
+export function loaderDrawn(): Promise<void> {
+  const drawing = document.getAnimations().filter((a) => (a as CSSAnimation).animationName === "uf-sweep");
+  return Promise.all(drawing.map((a) => a.finished.catch(() => {}))).then(() => {});
+}
+
+/**
  * Minimal stand-in for @gsap/react's useGSAP — scopes selector text to a ref
  * and reverts every tween, ScrollTrigger and SplitText on unmount.
  *

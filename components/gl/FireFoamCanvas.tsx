@@ -96,10 +96,13 @@ export default function FireFoamCanvas() {
       u.uFire.value = fireLeft(s);
       u.uFlood.value = Math.min(1, Math.max(0, (s - 0.9) / 0.1));
       // The layout spreads from the nozzle: re-lay it if the nozzle has moved
-      // (it settles as the extinguisher lands, before any foam is out).
-      if (Math.abs(shot.nozzle[0] - slotsFor) > 0.03) {
-        slots = foamSlots(count, aspect, shot.nozzle[0]);
-        slotsFor = shot.nozzle[0];
+      // (it settles as the extinguisher lands, before any foam is out). On a
+      // 0.03 grid, so it depends on where the nozzle is, not the path it took
+      // there: a fast scroll and a slow one lay the same foam.
+      const at = Math.round(shot.nozzle[0] / 0.03) * 0.03;
+      if (at !== slotsFor) {
+        slots = foamSlots(count, aspect, at);
+        slotsFor = at;
       }
       foamBlobs(s, slots, shot.nozzle, aspect, blobs.subarray(0, count * 3), shot.nozzleDir);
       for (let i = 0; i < count * 3; i++) blobUniform[i] = blobs[i];

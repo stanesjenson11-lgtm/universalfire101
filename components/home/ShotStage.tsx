@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { prefersReduced } from "@/lib/motion";
+import { loaderDrawn, prefersReduced } from "@/lib/motion";
 
 /**
  * Host for the 3D extinguisher shot (components/gl/shot-stage.ts): a fixed,
  * see-through layer above the sections and below the nav. three.js and the
- * model load straight after first paint; the hero's type never waits on them.
+ * model load once the preloader's needle has swept, and the layer fades in
+ * when ready; the hero's type never waits on them.
  * Placed after <Fire/> so the fire canvas has reported WebGL before it mounts.
  */
 export default function ShotStage() {
@@ -23,9 +24,14 @@ export default function ShotStage() {
     if (Object.values(els).some((e) => !e)) return;
     let stop = () => {};
     let gone = false;
-    import("@/components/gl/shot-stage")
+    loaderDrawn()
+      .then(() => import("@/components/gl/shot-stage"))
       .then(({ mountShotStage }) => mountShotStage(els as Record<keyof typeof els, HTMLElement>, prefersReduced(), () => gone))
-      .then((s) => (gone ? s() : (stop = s)))
+      .then((s) => {
+        if (gone) return s();
+        stop = s;
+        els.stage!.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, easing: "ease-out" });
+      })
       .catch((e) => console.error("[shot-stage]", e));
     return () => {
       gone = true;

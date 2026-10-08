@@ -84,29 +84,28 @@ export default function Emblem({
 }
 
 /**
- * The emblem as white line-art that draws itself — the preloader. Every
- * stroke has pathLength 1, so one CSS dash animation draws any of them;
- * the lettering is stroked text on the same schedule.
+ * The emblem as white line-art — the preloader's first frame, which a gauge
+ * needle uncovers (components/chrome/Loader.tsx); the lettering is stroked.
  */
 export function EmblemSkeleton({ className = "" }: { className?: string }) {
   const arc = useId();
-  const line = { fill: "none", stroke: "#fff", strokeWidth: 1.6, strokeLinejoin: "round" as const, strokeLinecap: "round" as const, pathLength: 1 };
+  const line = { fill: "none", stroke: "#fff", strokeWidth: 1.6, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
   return (
     <svg viewBox="0 0 200 200" className={className} aria-hidden="true">
-      <circle cx="100" cy="100" r="94" {...line} className="uf-draw" style={{ animationDelay: "0ms" }} />
-      <path d={P.band} {...line} className="uf-draw" style={{ animationDelay: "120ms" }} />
-      <path d={P.gear} {...line} className="uf-draw" style={{ animationDelay: "220ms" }} />
-      <path d={P.arrows} {...line} className="uf-draw" style={{ animationDelay: "320ms" }} />
-      <circle cx={P.hub.cx} cy={P.hub.cy} r={P.hub.r} {...line} className="uf-draw" style={{ animationDelay: "420ms" }} />
-      <path d={P.spokes} {...line} className="uf-draw" style={{ animationDelay: "500ms" }} />
-      <path d={P.flame} {...line} className="uf-draw" style={{ animationDelay: "580ms" }} />
+      <circle cx="100" cy="100" r="94" {...line} />
+      <path d={P.band} {...line} />
+      <path d={P.gear} {...line} />
+      <path d={P.arrows} {...line} />
+      <circle cx={P.hub.cx} cy={P.hub.cy} r={P.hub.r} {...line} />
+      <path d={P.spokes} {...line} />
+      <path d={P.flame} {...line} />
       <path id={arc} d={P.textArc} fill="none" />
-      <text className="uf-draw-text" fill="none" stroke="#fff" strokeWidth="0.8" fontFamily="var(--font-display)" fontWeight="900" fontSize="31" letterSpacing="2">
+      <text fill="none" stroke="#fff" strokeWidth="0.8" fontFamily="var(--font-display)" fontWeight="900" fontSize="31" letterSpacing="2">
         <textPath href={`#${arc}`} startOffset="50%" textAnchor="middle">
           UNIVERSAL
         </textPath>
       </text>
-      <text x="100" y="184" textAnchor="middle" className="uf-draw-text" fill="none" stroke="#fff" strokeWidth="0.8" fontFamily="var(--font-display)" fontWeight="900" fontSize="30" letterSpacing="1">
+      <text x="100" y="184" textAnchor="middle" fill="none" stroke="#fff" strokeWidth="0.8" fontFamily="var(--font-display)" fontWeight="900" fontSize="30" letterSpacing="1">
         FIRE
       </text>
     </svg>
