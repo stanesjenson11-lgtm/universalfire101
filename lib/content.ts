@@ -1073,7 +1073,7 @@ export const services = pages.filter((p) => p.group === "services");
 export const home = {
   hero: {
     lines: ["Ready before", "the spark."],
-    support: "Fire safety equipment and systems for Coimbatore, Chennai and all of Tamil Nadu.",
+    support: "Fire safety equipment and systems for all of Tamil Nadu.",
     cta: { label: "Book a site survey", text: "Hi Universal Fire, I'd like to book a fire safety site survey." },
   },
   fire: {

@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { home, page, products, services, type Block } from "@/lib/content";
 import Rich from "@/components/ui/Rich";
-import { gsap, ScrollTrigger, useGsap } from "@/lib/motion";
+import { gsap, prefersReduced, ScrollTrigger, useGsap } from "@/lib/motion";
 import { SpecTable, Statement } from "@/components/Blocks";
 import Enquiry from "@/components/Enquiry";
 import StackingCards, { StackingCardItem } from "@/components/fancy/blocks/stacking-cards";
@@ -167,59 +167,109 @@ export function Products() {
 
 /**
  * Seven extinguisher types behind an Apple segmented control. Desktop: one
- * screen that locks — heading beside its intro, the photo beside the table.
+ * screen that locks — the heading on one line, the photo beside the table.
+ *
+ * The types advance on their own every 10 seconds: a countdown line under the
+ * selected tab runs out and the next one shows. It holds (and picks up where it
+ * left off) while the pointer or keyboard focus is on the tabs, the photo or
+ * the table, and while the section is off screen; a click picks a type and
+ * starts the 10 seconds again. Not under reduced motion.
  */
 export function Specs() {
   const types = page("types-of-fire-extinguisher")!;
   const specs = types.blocks.filter((b): b is Extract<Block, { type: "specs" }> => b.type === "specs");
-  const intro = types.blocks.find((b): b is Extract<Block, { type: "prose" }> => b.type === "prose")!;
   const [at, setAt] = useState(0);
+  const [near, setNear] = useState(false);
   const s = specs[at];
   const scope = useLock();
+  const tabs = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLSpanElement>(null);
+  const held = useRef({ pointer: false, keys: false });
+
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => setNear(e.isIntersecting));
+    io.observe(scope.current!);
+    return () => io.disconnect();
+  }, [scope]);
+
+  // The countdown, in script rather than a CSS animation: a locked section is
+  // re-inserted on every ScrollTrigger refresh, which restarts CSS animations.
+  // Time only adds up while nothing holds it, so it resumes where it paused;
+  // a new tab, or coming back on screen, starts a fresh 10 seconds.
+  useEffect(() => {
+    if (!near || prefersReduced()) return;
+    let spent = 0;
+    let last = performance.now();
+    let raf = requestAnimationFrame(function tick(now) {
+      if (!held.current.pointer && !held.current.keys) spent += Math.max(0, now - last); // a frame's stamp can predate the start
+      last = now;
+      // `scale`, not transform: it is what the bar's scale-x-0 class sets.
+      bar.current?.style.setProperty("scale", `${Math.min(1, spent / 10000)} 1`);
+      if (spent >= 10000) setAt((n) => (n + 1) % specs.length);
+      else raf = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [at, near, specs.length]);
+
+  // Phones: keep the selected tab in the strip's view as they advance.
+  useEffect(() => {
+    const list = tabs.current;
+    const tab = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!list || !tab || list.scrollWidth <= list.clientWidth) return;
+    const l = list.getBoundingClientRect();
+    const t = tab.getBoundingClientRect();
+    if (t.left < l.left || t.right > l.right) list.scrollBy({ left: t.left - l.left - 16, behavior: "smooth" });
+  }, [at]);
 
   return (
     <section ref={scope} id="specs" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
       <div className="mx-auto w-full max-w-[72rem]">
-        <div className="grid items-end gap-x-12 gap-y-5 wide:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
-          <Headline>Every extinguisher, by the numbers</Headline>
-          <p className="max-w-[46rem] text-lead text-muted wide:text-body">
-            <Rich text={intro.body[0]} />
-          </p>
-        </div>
+        <Headline className="wide:whitespace-nowrap">Every extinguisher, by the numbers</Headline>
 
-        <div role="tablist" aria-label="Extinguisher type" className="mt-10 -mx-gutter wide:mt-[clamp(1rem,3svh,2rem)] overflow-x-auto px-gutter [scrollbar-width:none]">
-          <div className="inline-flex gap-1 rounded-full bg-paper p-1">
-            {specs.map((x, i) => (
-              <button
-                key={x.heading}
-                role="tab"
-                id={`spec-tab-${i}`}
-                aria-selected={i === at}
-                aria-controls="spec-panel"
-                onClick={() => setAt(i)}
-                className="whitespace-nowrap rounded-full px-4 py-2 text-small transition-[background-color,color,box-shadow] duration-300 aria-selected:bg-white aria-selected:font-medium aria-selected:shadow-[0_1px_4px_rgb(0_0_0/0.12)] hover:text-ink text-muted aria-selected:text-ink"
-              >
-                {x.heading.replace(/ —.*$/, "").replace(" type", "")}
-              </button>
-            ))}
-          </div>
-        </div>
-
+        {/* The pointer, or keyboard focus, in here holds the countdown. */}
         <div
-          id="spec-panel"
-          role="tabpanel"
-          aria-labelledby={`spec-tab-${at}`}
-          className="mt-10 grid gap-x-12 gap-y-8 wide:mt-[clamp(1rem,3svh,2rem)] wide:grid-cols-12"
+          onPointerEnter={() => (held.current.pointer = true)}
+          onPointerLeave={() => (held.current.pointer = false)}
+          onFocus={(e) => (held.current.keys = e.target.matches(":focus-visible"))}
+          onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && (held.current.keys = false)}
         >
-          {/* Desktop: as tall as the table beside it. */}
-          <div key={s.image?.src} className="card relative aspect-square overflow-hidden bg-paper wide:col-span-4 wide:aspect-auto">
-            {s.image && <Image src={s.image.src} alt={s.image.alt} fill sizes="22rem" className="object-contain p-[8%] mix-blend-multiply" />}
+          <div ref={tabs} role="tablist" aria-label="Extinguisher type" className="mt-10 -mx-gutter wide:mt-[clamp(1rem,3svh,2rem)] overflow-x-auto px-gutter [scrollbar-width:none]">
+            <div className="inline-flex gap-1 rounded-full bg-paper p-1">
+              {specs.map((x, i) => (
+                <button
+                  key={x.heading}
+                  role="tab"
+                  id={`spec-tab-${i}`}
+                  aria-selected={i === at}
+                  aria-controls="spec-panel"
+                  onClick={() => setAt(i)}
+                  className="relative whitespace-nowrap rounded-full px-4 py-2 text-small transition-[background-color,color,box-shadow] duration-300 aria-selected:bg-white aria-selected:font-medium aria-selected:shadow-[0_1px_4px_rgb(0_0_0/0.12)] hover:text-ink text-muted aria-selected:text-ink"
+                >
+                  {x.heading.replace(/ —.*$/, "").replace(" type", "")}
+                  {i === at && (
+                    <span ref={bar} aria-hidden="true" className="absolute inset-x-4 bottom-1 h-[1.5px] origin-left scale-x-0 rounded-full bg-fire/60" />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="wide:col-span-8">
-            <h3 className="text-h3 font-semibold">{s.heading}</h3>
-            {s.suitable && <p className="mt-2 text-small text-muted">{s.suitable}</p>}
-            {/* Keyed so every switch re-runs the number tickers. Rows tighten on short screens. */}
-            <SpecTable key={at} rows={s.rows} columns={s.columns} className="mt-4 wide:[--row:clamp(0.35rem,1.1svh,0.75rem)]" />
+
+          <div
+            id="spec-panel"
+            role="tabpanel"
+            aria-labelledby={`spec-tab-${at}`}
+            className="mt-10 grid gap-x-12 gap-y-8 wide:mt-[clamp(1rem,3svh,2rem)] wide:grid-cols-12"
+          >
+            {/* Desktop: as tall as the table beside it. */}
+            <div key={s.image?.src} className="card relative aspect-square overflow-hidden bg-paper wide:col-span-4 wide:aspect-auto">
+              {s.image && <Image src={s.image.src} alt={s.image.alt} fill sizes="22rem" className="object-contain p-[8%] mix-blend-multiply" />}
+            </div>
+            <div className="wide:col-span-8">
+              <h3 className="text-h3 font-semibold">{s.heading}</h3>
+              {s.suitable && <p className="mt-2 text-small text-muted">{s.suitable}</p>}
+              {/* Keyed so every switch re-runs the number tickers. Rows tighten on short screens. */}
+              <SpecTable key={at} rows={s.rows} columns={s.columns} className="mt-4 wide:[--row:clamp(0.35rem,1.1svh,0.75rem)]" />
+            </div>
           </div>
         </div>
         <p className="mt-10 wide:mt-[clamp(1rem,3svh,2rem)]">

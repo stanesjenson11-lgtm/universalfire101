@@ -95,6 +95,23 @@
   font-weight: 500;
 }
 
+/* The hero headline, FidaroHQ's: Archivo at full width, extra-bold. */
+@utility u-hero {
+  font-family: var(--font-archivo), "Archivo", "Helvetica Neue", Arial, sans-serif;
+  font-stretch: 125%;
+  font-weight: 800;
+  font-size: clamp(1.85rem, 5.1vw, 4.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+}
+/* Apple's lead-airy, under it (FidaroHQ's too). */
+@utility u-lead {
+  font-size: clamp(1.0625rem, 1.5vw, 1.375rem);
+  line-height: 1.45;
+  font-weight: 300;
+  letter-spacing: -0.022em;
+}
+
 /* One screen: the section fits the viewport exactly, clear of the nav pill,
    its content centred in what is left. Sections that lock in place use it. */
 @utility frame {
@@ -426,6 +443,36 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* Under the wordmark, small and tracked out: the rest of the name. */
+.uf-wordmark-sub {
+  font-family: var(--font-archivo), "Archivo", "Helvetica Neue", Arial, sans-serif;
+  font-stretch: 125%;
+  font-size: 0.5rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+/* The hero's call to action, lettered on the fire engine like its livery:
+   the cream of its stripe, the hero's wide face. */
+.uf-livery text {
+  font-family: var(--font-archivo), "Archivo", "Helvetica Neue", Arial, sans-serif;
+  font-stretch: 100%;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  fill: #f4f0d0;
+}
+.uf-livery:hover text,
+.uf-livery:focus-visible text {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Contact: the nav's one orange control. */

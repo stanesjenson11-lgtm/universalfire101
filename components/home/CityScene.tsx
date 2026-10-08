@@ -232,10 +232,50 @@ export default function CityScene() {
       {Array.from({ length: 46 }, (_, i) => (
         <circle key={i} className="star" cx={r1(rnd(i) * 1600)} cy={r1(20 + rnd(i + 100) * 380)} r={r1(0.8 + rnd(i + 200) * 1.3)} fill="#fff" opacity="0.45" />
       ))}
-      {/* Low enough to stay clear of the nav even where a short, wide screen crops the sky. */}
-      <circle cx="1330" cy="290" r="40" fill="#e8e4d8" opacity="0.92" />
-      <circle cx="1318" cy="280" r="7" fill="#d4cfc0" />
-      <circle cx="1344" cy="302" r="5" fill="#d4cfc0" />
+      {/* The moon, low enough to stay clear of the nav even where a short, wide
+          screen crops the sky: a faint glow, soft-edged seas, craters with a
+          dark floor and a lit rim, and the edge darkening a touch (blur filters,
+          no gradients). */}
+      <defs>
+        <filter id="cs-moon-soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.8" />
+        </filter>
+        <filter id="cs-moon-glow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="14" />
+        </filter>
+        <clipPath id="cs-moon-disc">
+          <circle r="40" />
+        </clipPath>
+      </defs>
+      <g transform="translate(1330 290)">
+        <circle r="46" fill="#e8e4d8" opacity="0.16" filter="url(#cs-moon-glow)" />
+        <circle r="40" fill="#ebe7dc" />
+        <g clipPath="url(#cs-moon-disc)">
+          <g fill="#b9b2a0" opacity="0.6" filter="url(#cs-moon-soft)">
+            <path d="M-24 -13 C-17 -25 0 -24 5 -14 C9 -4 -2 3 -12 1 C-21 -1 -29 -5 -24 -13Z" />
+            <path d="M3 5 C11 -1 25 3 25 13 C25 22 13 27 6 21 C1 17 -1 10 3 5Z" />
+            <path d="M-9 13 C-3 11 2 17 -2 23 C-6 28 -15 26 -15 20 C-15 16 -13 14 -9 13Z" />
+            <ellipse cx="17" cy="-18" rx="8" ry="6" />
+            <ellipse cx="-27" cy="10" rx="5" ry="7" />
+          </g>
+          {(
+            [
+              [-5, -27, 3.6],
+              [23, -3, 4.2],
+              [-25, -2, 2.6],
+              [11, 29, 3],
+              [-14, 28, 2],
+              [30, 14, 2.2],
+            ] as const
+          ).map(([x, y, r]) => (
+            <g key={`${x}${y}`}>
+              <circle cx={x} cy={y} r={r} fill="#c6bfad" />
+              <circle cx={x + 0.7} cy={y + 0.7} r={r} fill="none" stroke="#f7f4ec" strokeWidth="0.9" opacity="0.75" />
+            </g>
+          ))}
+          <circle r="40" fill="none" stroke="#a49d8b" strokeWidth="7" opacity="0.4" filter="url(#cs-moon-soft)" />
+        </g>
+      </g>
 
       {BACK.map(([x, bw, h], i) => (
         <rect key={`b${i}`} x={x} y={STREET - h} width={bw} height={h} fill={C.back} />
@@ -267,23 +307,25 @@ export default function CityScene() {
         <rect key={i} x={i * 104 + 20} y={STREET + 26} width="48" height="3" fill="#1c1c1f" />
       ))}
 
-      {/* fire engine, ladder up against building 2 */}
+      {/* fire engine, ladder up against building 2. Far enough in from the
+          left that a 16:10 screen's crop keeps its cab, and the call to action
+          lettered on its side (Hero.tsx) clear of the edge. */}
       <g>
-        <line x1="236" y1="792" x2="356" y2="662" stroke="#8a8f99" strokeWidth="4" />
-        <line x1="252" y1="800" x2="372" y2="670" stroke="#8a8f99" strokeWidth="4" />
+        <line x1="296" y1="792" x2="356" y2="662" stroke="#8a8f99" strokeWidth="4" />
+        <line x1="312" y1="800" x2="372" y2="670" stroke="#8a8f99" strokeWidth="4" />
         {Array.from({ length: 9 }, (_, i) => {
           const t = (i + 1) / 10;
-          return <line key={i} x1={236 + 120 * t} y1={792 - 130 * t} x2={252 + 120 * t} y2={800 - 130 * t} stroke="#8a8f99" strokeWidth="2.5" />;
+          return <line key={i} x1={296 + 60 * t} y1={792 - 130 * t} x2={312 + 60 * t} y2={800 - 130 * t} stroke="#8a8f99" strokeWidth="2.5" />;
         })}
-        <rect x="40" y="788" width="230" height="52" rx="6" fill="#c2410c" />
-        <rect x="40" y="808" width="230" height="4" fill="#f4f0d0" />
-        <rect x="18" y="768" width="66" height="72" rx="9" fill="#b33a0b" />
-        <rect x="26" y="776" width="40" height="26" rx="4" fill="#9fb7c9" opacity="0.55" />
-        <rect className="beacon" x="34" y="760" width="22" height="8" rx="3" fill="#ffb547" />
-        <circle cx="76" cy="842" r="17" fill="#0c0c0d" />
-        <circle cx="76" cy="842" r="6" fill="#3a3a40" />
-        <circle cx="228" cy="842" r="17" fill="#0c0c0d" />
-        <circle cx="228" cy="842" r="6" fill="#3a3a40" />
+        <rect x="100" y="788" width="230" height="52" rx="6" fill="#c2410c" />
+        <rect x="100" y="808" width="230" height="4" fill="#f4f0d0" />
+        <rect x="78" y="768" width="66" height="72" rx="9" fill="#b33a0b" />
+        <rect x="86" y="776" width="40" height="26" rx="4" fill="#9fb7c9" opacity="0.55" />
+        <rect className="beacon" x="94" y="760" width="22" height="8" rx="3" fill="#ffb547" />
+        <circle cx="136" cy="842" r="17" fill="#0c0c0d" />
+        <circle cx="136" cy="842" r="6" fill="#3a3a40" />
+        <circle cx="288" cy="842" r="17" fill="#0c0c0d" />
+        <circle cx="288" cy="842" r="6" fill="#3a3a40" />
       </g>
 
       {/* fires, each with its foam and smoke */}
