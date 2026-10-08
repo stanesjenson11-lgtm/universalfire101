@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { Renderer, Program, Mesh, Triangle } from "ogl";
 import { vertex, fragment, MAX_BLOBS } from "./fire-foam-shaders";
 import { foamBlobs, foamSlots, fireLeft, SPREAD, THRESHOLD } from "@/lib/foam";
-import { engaged, prefersReduced } from "@/lib/motion";
+import { afterPaint, canWebGL, engaged, prefersReduced, ScrollTrigger } from "@/lib/motion";
 import { shot } from "@/lib/shot";
 
 const PHONE = "(max-width: 620px)";
@@ -19,6 +19,41 @@ const PHONE = "(max-width: 620px)";
  */
 export default function FireFoamCanvas() {
   const host = useRef<HTMLDivElement>(null);
+
+  // The fire section's pin, from the first render: its scroll length is fixed,
+  // so the page never changes height under someone when the WebGL arrives.
+  // Its progress is the spray (shot.spray), which the 3D extinguisher and this
+  // canvas read. The section's ground (for the nav) and its highlight follow it.
+  useEffect(() => {
+    const section = host.current?.closest("section");
+    if (!section) return;
+    if (prefersReduced() || !canWebGL()) {
+      shot.spray = 1; // the finished scene, as the CSS draws it
+      return;
+    }
+    const spray = (s: number) => {
+      shot.spray = s;
+      section.dataset.ground = !shot.live || s > 0.55 ? "light" : "dark";
+      section.style.setProperty("--hl", Math.min(1, Math.max(0, (s - 0.8) / 0.12)).toFixed(3));
+    };
+    // After the first paint, so the page's first frame never waits on it.
+    let st: ScrollTrigger | undefined;
+    const cancel = afterPaint(() => {
+      st = ScrollTrigger.create({
+        trigger: section,
+        start: "top top",
+        end: window.matchMedia(PHONE).matches ? "+=170%" : "+=240%",
+        pin: true,
+        anticipatePin: 1,
+        onUpdate: (self) => spray(self.progress),
+        onRefresh: (self) => spray(self.progress),
+      });
+    });
+    return () => {
+      cancel();
+      st?.kill();
+    };
+  }, []);
 
   useEffect(() => {
     const el = host.current;

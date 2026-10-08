@@ -14,6 +14,32 @@ export { gsap, ScrollTrigger };
 export const useIsoLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+/**
+ * Whether this browser has WebGL. A capability check, not a context: making a
+ * context is the GPU's first start-up (hundreds of ms on a phone), and the
+ * pins that ask this are made as the page starts. If a context still fails
+ * later, the scene it was for just keeps its finished, static look.
+ */
+export function canWebGL(): boolean {
+  return typeof window !== "undefined" && "WebGLRenderingContext" in window;
+}
+
+/**
+ * Runs `fn` after the next frame has been painted (two animation frames): for
+ * set-up the first paint should not wait on, such as pins (each one makes
+ * ScrollTrigger re-lay the page out). Returns a cancel.
+ */
+export function afterPaint(fn: () => void) {
+  let id = requestAnimationFrame(() => (id = requestAnimationFrame(fn)));
+  return () => cancelAnimationFrame(id);
+}
+
+/** Runs `fn` when the main thread is idle (Safari has no requestIdleCallback: a short timeout there). */
+export function whenIdle(fn: () => void, timeout = 1500) {
+  if ("requestIdleCallback" in window) window.requestIdleCallback(fn, { timeout });
+  else setTimeout(fn, 600);
+}
+
 export function prefersReduced(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -153,16 +153,18 @@
     box-sizing: border-box;
   }
 
+  /* No scroll-behavior: smooth. Lenis already smooths in-page jumps, and
+     ScrollTrigger copies a smooth root onto <html> inline after each refresh,
+     so the browser animated its scroll restores: the page drifted by itself
+     on phones whenever it re-measured. */
   html {
     -webkit-text-size-adjust: 100%;
-    scroll-behavior: smooth;
     scrollbar-gutter: stable;
   }
 
   html.lenis,
   html.lenis body {
     height: auto;
-    scroll-behavior: auto;
   }
   .lenis.lenis-smooth {
     scroll-behavior: auto !important;
@@ -834,8 +836,21 @@
   body:has(.uf-loader) #top {
     visibility: visible;
   }
-  body:has(.uf-loader) :is(body > header, main, body > footer, #top > svg) {
+  body:has(.uf-loader) :is(body > header, main, body > footer) {
     animation: uf-unveil 1ms 1240ms both; /* the foam's last pixels of easing in, ~still */
+  }
+  /* The hero's city (hundreds of SVG shapes, half the page's layout) is not
+     even laid out under the loader, so the first frame does not wait on it.
+     (Where display cannot animate, it is laid out hidden, as before.) */
+  body:has(.uf-loader) #top > svg {
+    animation:
+      uf-unveil 1ms 1240ms both,
+      uf-unveil-layout 1ms 1240ms both;
+  }
+}
+@keyframes uf-unveil-layout {
+  from {
+    display: none;
   }
 }
 @keyframes uf-unveil {

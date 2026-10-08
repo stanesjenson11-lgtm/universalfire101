@@ -30,7 +30,10 @@ type Els = {
  * projected from the model every frame into the fire canvas (shot.nozzle,
  * shot.nozzleDir) — and smothers the fire, spreading out from where it lands.
  *
- * Two scrubbed tweens over plain numbers, so scrolling back reverses it all.
+ * The tumble is a scrubbed tween over the hero; the spray is the fire
+ * section's own pin (FireFoamCanvas), read as shot.spray. Scrolling back
+ * reverses it all. This module makes no pins, so its arriving late (it waits
+ * for someone to be here) never changes the page's height.
  * Both are locked to the scroll position (Lenis already smooths it), never
  * eased behind it: a fast scroll and a slow one show the same frames.
  * Under reduced motion the model just stands in the hero (no tweens).
@@ -42,6 +45,9 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   } catch {
     return () => {};
   }
+  // No synchronous shader-status checks: they stall the main thread until the
+  // GPU has compiled (half a second on a phone). compileAsync below instead.
+  renderer.debug.checkShaderErrors = false;
   const phone = window.matchMedia("(max-width: 620px)").matches;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, phone ? 1.5 : 1.75));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -122,7 +128,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   window.addEventListener("resize", resize);
   const world = (sx: number, sy: number) => new THREE.Vector3((sx - W / 2) * k, (H / 2 - sy) * k, 0);
 
-  const state = { r: 0, s: still ? 0 : 0 };
+  const state = { r: 0 };
   const v = new THREE.Vector3();
 
   /*
@@ -234,7 +240,9 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     pose.ins = c === 0 ? t : c === 1 ? 1 - t : 0;
     // While the exploded view holds the screen, it is the exploded model. That
     // one is already showing underneath, identical, so this one just fades.
-    const merged = c === 1 ? smooth(0.006, 0.05, shot.inside) * (1 - smooth(0.95, 0.99, shot.inside)) : 0;
+    // (Only once the exploded view is up — it publishes insideOpen — so this
+    // one never fades into an empty stage.)
+    const merged = c === 1 && shot.insideOpen ? smooth(0.006, 0.05, shot.inside) * (1 - smooth(0.95, 0.99, shot.inside)) : 0;
     // Fading out it holds on until it is nearly off the screen.
     pose.o = lerp(cur.o, next.o, next.o < cur.o ? t * t * t : t) * (1 - merged);
     moved = Math.abs(window.scrollY - lastY);
@@ -339,7 +347,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     if (canvas.style.visibility === "hidden") canvas.style.visibility = "";
 
     const r = state.r;
-    const s = state.s;
+    const s = shot.spray;
     const e = inOut(r);
 
     // Stand on the bottom centre of each anchor box, sized to its height.
@@ -432,8 +440,6 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     shot.nozzle[1] = (ny - f.top) / Math.max(1, f.height);
     if (companion) foam(time, nx, ny, after > 0.95 ? pose.rocket : 0, after > 0.95 ? pose.trail : 0);
 
-    fire.dataset.ground = !shot.live || s > 0.55 ? "light" : "dark";
-    fire.style.setProperty("--hl", clamp01((s - 0.8) / 0.12).toFixed(3));
     renderer.render(scene, camera);
   };
 
@@ -457,6 +463,14 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     settle--;
     apply(performance.now() / 1000);
   };
+  // Shaders compile in the background (KHR_parallel_shader_compile) before
+  // the first frame, instead of blocking it.
+  await renderer.compileAsync(scene, camera).catch(() => {});
+  if (cancelled()) {
+    renderer.dispose();
+    env.dispose();
+    return () => {};
+  }
   stage.appendChild(fx);
   stage.appendChild(canvas);
   document.documentElement.classList.add("ext-live");
@@ -469,24 +483,12 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
         ease: "none",
         scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: true },
       });
-      if (shot.live) {
-        gsap.to(state, {
-          s: 1,
-          ease: "none",
-          onUpdate: () => void (shot.spray = state.s),
-          scrollTrigger: { trigger: fire, start: "top top", end: phone ? "+=170%" : "+=240%", pin: true, scrub: true },
-        });
-      } else {
-        state.s = shot.spray = 1;
-      }
     });
   } else {
-    state.s = shot.spray = 1;
+    shot.spray = 1;
   }
   gsap.ticker.add(tick);
   tick();
-  // Pins made after load change the page height below them: re-measure all.
-  ScrollTrigger.refresh();
 
   return () => {
     gsap.ticker.remove(tick);
@@ -498,6 +500,5 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     canvas.remove();
     fx.remove();
     document.documentElement.classList.remove("ext-live");
-    shot.spray = 0;
   };
 }

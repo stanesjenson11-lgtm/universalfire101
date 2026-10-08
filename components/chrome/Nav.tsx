@@ -18,6 +18,7 @@ export default function Nav() {
   const [current, setCurrent] = useState("");
   const [open, setOpen] = useState(false);
   const bar = useRef<HTMLDivElement>(null);
+  const back = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const ids = nav.links.map((l) => l.href.slice(1));
@@ -49,6 +50,7 @@ export default function Nav() {
 
   useEffect(() => {
     if (!open) return;
+    back.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("keydown", onKey);
     document.documentElement.style.overflow = "hidden";
@@ -119,6 +121,19 @@ export default function Nav() {
         data-open={open}
         className="uf-sheet on-black fixed inset-0 z-[var(--z-overlay)] overflow-y-auto px-gutter pt-28 pb-10 bar:hidden"
       >
+        {/* The sheet covers the header and its menu button (the header is its
+            own stacking context), so the way back lives on the sheet. */}
+        <button
+          ref={back}
+          type="button"
+          onClick={() => setOpen(false)}
+          className="absolute top-5 left-gutter -ml-3 flex h-11 w-11 items-center justify-center"
+        >
+          <span className="sr-only">Close menu</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
         <nav aria-label="Mobile" className="flex flex-col">
           {nav.links.map((l, i) => (
             <a

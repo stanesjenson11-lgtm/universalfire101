@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { gsap, ScrollTrigger } from "@/lib/motion";
+import { gsap } from "@/lib/motion";
 import { shot } from "@/lib/shot";
 import { extinguisher, studioEnvironment, contactShadow, partBox, HEIGHT, AXIS_Z } from "./extinguisher3d";
 
@@ -51,7 +51,8 @@ type Els = {
  *   0.80–0.95  it turns back to where it began, and hands back to the drift
  * Its camera matches the drifting one's lens (20°), and it sits underneath that
  * one through each hand-over, so the cross-fade is between identical frames.
- * Its progress goes out as shot.inside, so the hand-overs line up.
+ * The progress is the stage's own pin (Inside.tsx), read as shot.inside, so
+ * the hand-overs line up and this module, arriving late, makes no pins.
  * `still` renders the finished, exploded frame once (reduced motion).
  */
 export async function mountExploded({ section, host, svg, callouts, intro }: Els, still: boolean, cancelled: () => boolean = () => false) {
@@ -61,6 +62,7 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
   } catch {
     return () => {};
   }
+  renderer.debug.checkShaderErrors = false; // see shot-stage.ts: compileAsync instead
   const phone = window.matchMedia("(max-width: 760px)").matches;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, phone ? 1.5 : 1.75));
   renderer.localClippingEnabled = true;
@@ -161,7 +163,7 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
   let W = 1;
   let H = 1;
   let titleBottom = 0; // px from the stage's top to under the title
-  const state = { p: still ? 0.5 : 0 };
+  const progress = () => (still ? 0.5 : shot.inside);
 
   // Phones: name-only labels in narrow columns at the screen's edges.
   const labelW = phone ? 100 : 230;
@@ -248,8 +250,7 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
   };
 
   const draw = () => {
-    const p = state.p;
-    shot.inside = p;
+    const p = progress();
     // Arrives facing as the drifting extinguisher does (-0.95), turns to show
     // the cut, and comes back round a full turn to the same pose to leave.
     turn.rotation.y =
@@ -293,33 +294,30 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     publishOpen();
     draw();
   };
+  await renderer.compileAsync(scene, camera).catch(() => {});
+  if (cancelled()) {
+    renderer.dispose();
+    env.dispose();
+    return () => {};
+  }
   host.appendChild(canvas);
   resize();
   const ro = new ResizeObserver(resize);
   ro.observe(host);
   ro.observe(intro); // the title's height (web font, wrapping) moves the narrow framing
 
-  const stage = host.parentElement!;
-  let ctx: gsap.Context | undefined;
-  if (!still) {
-    ctx = gsap.context(() => {
-      gsap.to(state, {
-        p: 1,
-        ease: "none",
-        onUpdate: draw,
-        // The stage pins, not the section: on phones the parts list sits below it.
-        // Locked to the scroll (no easing behind it), like the drifting model,
-        // so the two stay in step through the hand-overs at any scroll speed.
-        scrollTrigger: { trigger: stage, start: "top top", end: phone ? "+=300%" : "+=440%", pin: stage, scrub: true },
-      });
-    }, section);
-  }
+  // Draw when the stage's progress moves.
+  let drawn = -1;
+  const tick = () => {
+    if (progress() === drawn) return;
+    drawn = progress();
+    draw();
+  };
+  if (!still) gsap.ticker.add(tick);
   section.dataset.live = "";
-  // Pins made after load change the page height below them: re-measure all.
-  ScrollTrigger.refresh();
 
   return () => {
-    ctx?.revert();
+    gsap.ticker.remove(tick);
     ro.disconnect();
     renderer.dispose();
     env.dispose();

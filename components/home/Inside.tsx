@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { home } from "@/lib/content";
-import { prefersReduced } from "@/lib/motion";
+import { afterPaint, canWebGL, engaged, prefersReduced, ScrollTrigger, whenIdle } from "@/lib/motion";
+import { shot } from "@/lib/shot";
 
 /**
  * "Inside every extinguisher": the scanned 3D extinguisher turns, opens in a
@@ -19,35 +20,66 @@ export default function Inside() {
   const intro = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
 
+  // The stage's pin, from the first render (the section, not the stage, is
+  // what phones scroll on past it): its length is fixed, so the page never
+  // changes height when the 3D arrives. Its progress is shot.inside.
+  useEffect(() => {
+    const stage = host.current?.parentElement;
+    if (!stage || prefersReduced() || !canWebGL()) return;
+    // After the first paint, so the page's first frame never waits on it.
+    let st: ScrollTrigger | undefined;
+    const cancel = afterPaint(() => {
+      st = ScrollTrigger.create({
+        trigger: stage,
+        pin: stage,
+        start: "top top",
+        end: window.matchMedia("(max-width: 760px)").matches ? "+=300%" : "+=440%",
+        anticipatePin: 1,
+        onUpdate: (self) => void (shot.inside = self.progress),
+        onRefresh: (self) => void (shot.inside = self.progress),
+      });
+    });
+    return () => {
+      cancel();
+      st?.kill();
+    };
+  }, []);
+
+  // The 3D: started in idle time once someone is here, well before it is
+  // reached (its start-up is half a second of work on a phone), or as it
+  // comes within a screen, whichever is first.
   useEffect(() => {
     const el = section.current;
     if (!el || !host.current || !svg.current || !intro.current || !list.current) return;
     let stop = () => {};
     let gone = false;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        io.disconnect();
-        import("@/components/gl/exploded")
-          .then(({ mountExploded }) =>
-            mountExploded(
-              {
-                section: el,
-                host: host.current!,
-                svg: svg.current!,
-                intro: intro.current!,
-                callouts: Array.from(list.current!.children) as HTMLElement[],
-              },
-              prefersReduced(),
-              () => gone,
-            ),
-          )
-          .then((s) => (gone ? s() : (stop = s)))
-          .catch(() => {});
-      },
-      { rootMargin: "100% 0px" },
-    );
+    let started = false;
+    const start = () => {
+      if (started || gone) return;
+      started = true;
+      io.disconnect();
+      import("@/components/gl/exploded")
+        .then(({ mountExploded }) =>
+          mountExploded(
+            {
+              section: el,
+              host: host.current!,
+              svg: svg.current!,
+              intro: intro.current!,
+              callouts: Array.from(list.current!.children) as HTMLElement[],
+            },
+            prefersReduced(),
+            () => gone,
+          ),
+        )
+        .then((s) => (gone ? s() : (stop = s)))
+        .catch(() => {});
+    };
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && start(), {
+      rootMargin: "100% 0px",
+    });
     io.observe(el);
+    engaged().then(() => whenIdle(start, 2500));
     return () => {
       gone = true;
       io.disconnect();

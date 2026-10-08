@@ -44,7 +44,7 @@ function useLock() {
   return useGsap<HTMLElement>(({ self }) => {
     const mm = gsap.matchMedia();
     mm.add("(min-width: 64rem)", () => {
-      ScrollTrigger.create({ trigger: self, pin: true, start: pinStart(self), end: "+=50%", invalidateOnRefresh: true });
+      ScrollTrigger.create({ trigger: self, pin: true, anticipatePin: 1, start: pinStart(self), end: "+=50%", invalidateOnRefresh: true });
     });
     return () => mm.revert();
   });
@@ -360,6 +360,7 @@ export function Sectors() {
       scrollTrigger: {
         trigger: self,
         pin: true,
+        anticipatePin: 1,
         // The section is one screen (frame): it holds as it fills it.
         start: pinStart(self),
         end: () => `+=${dist()}`,

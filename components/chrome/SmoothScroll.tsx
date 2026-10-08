@@ -5,7 +5,7 @@ import Lenis from "lenis";
 import { gsap, ScrollTrigger, prefersReduced } from "@/lib/motion";
 
 /**
- * Lenis drives scrolling; ScrollTrigger reads from it. From Kickstart, minus
+ * Lenis smooths the mouse wheel; touch is native. ScrollTrigger reads from it. From Kickstart, minus
  * the snap points and keyframes. Holds still while a product sheet is open
  * (DetailController sends uf:hold).
  */
@@ -17,19 +17,23 @@ export default function SmoothScroll() {
       duration: 1.05,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      // Touch through Lenis too: pinned scenes otherwise move a frame behind
-      // the compositor's native scroll and shake.
-      syncTouch: true,
+      // Touch stays native: phones (Safari above all) scroll on their own
+      // compositor, with their own momentum. Routed through Lenis it was laggy
+      // and floaty. The pins anticipate instead (anticipatePin), so they
+      // engage without a jump.
+      syncTouch: false,
     });
     l.on("scroll", ScrollTrigger.update);
     const onHold = (e: Event) => ((e as CustomEvent<boolean>).detail ? l.stop() : l.start());
     window.addEventListener("uf:hold", onHold);
 
     ScrollTrigger.config({ ignoreMobileResize: true });
-    const refresh = () => ScrollTrigger.refresh();
-    if (document.readyState === "complete") refresh();
-    else window.addEventListener("load", refresh);
-    document.fonts?.ready.then(refresh).catch(() => {});
+    // ScrollTrigger re-measures by itself at DOMContentLoaded and load. Fonts
+    // that land after load move the text, so re-measure for those only (each
+    // refresh is a full re-layout of every trigger: costly on a phone).
+    document.fonts?.ready
+      .then(() => document.readyState === "complete" && ScrollTrigger.refresh())
+      .catch(() => {});
 
     const tick = (time: number) => l.raf(time * 1000);
     gsap.ticker.add(tick);
@@ -56,7 +60,6 @@ export default function SmoothScroll() {
 
     return () => {
       window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("load", refresh);
       window.removeEventListener("uf:hold", onHold);
       document.removeEventListener("click", onClick);
       gsap.ticker.remove(tick);
