@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { gsap, ScrollTrigger } from "@/lib/motion";
 import { shot } from "@/lib/shot";
-import { extinguisher, studioEnvironment, contactShadow, HEIGHT, AXIS_Z } from "./extinguisher3d";
+import { extinguisher, studioEnvironment, contactShadow, partBox, HEIGHT, AXIS_Z } from "./extinguisher3d";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -143,14 +143,15 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
   const groups = PARTS.map((p) => {
     const meshes = p.meshes.map((n) => parts[n]).filter(Boolean);
     const box = new THREE.Box3();
-    for (const m of meshes) {
-      m.geometry.computeBoundingBox();
-      box.union(m.geometry.boundingBox!.clone().translate(m.position));
-    }
+    for (const m of meshes) box.union(partBox(m).translate(m.position));
     const anchor = box.getCenter(new THREE.Vector3());
     if (p.meshes[0] === "powder") anchor.set(0.05, 0.25, AXIS_Z + 0.05);
     if (p.meshes[0] === "cylinder") anchor.set(-0.07, 0.42, AXIS_Z + 0.06);
-    return { ...p, meshes, rest: meshes.map((m) => m.position.clone()), anchor };
+    // Kept in the first mesh's own space (no rotation at rest, so just less its
+    // position): its lift and its tilt — which turns about the scan's origin,
+    // at the base, and swings the small parts well aside — carry the anchor too.
+    const local = anchor.clone().sub(meshes[0].position);
+    return { ...p, meshes, rest: meshes.map((m) => m.position.clone()), local };
   });
 
   const FOV = 20;
@@ -215,11 +216,8 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     const oy = host.offsetTop;
     type C = { el: HTMLElement; ax: number; ay: number; y: number; left: boolean; o: number };
     const all: C[] = groups.map((g, i) => {
-      // Follow the part as it moves: anchor + its current displacement.
-      tmp.copy(g.anchor);
-      const m = g.meshes[0];
-      if (m) tmp.add(m.position).sub(g.rest[0]);
-      root.localToWorld(tmp);
+      // Follow the part as it moves: its anchor through its own transform.
+      g.meshes[0].localToWorld(tmp.copy(g.local));
       tmp.project(camera);
       const ax = (tmp.x * 0.5 + 0.5) * W;
       const ay = (-tmp.y * 0.5 + 0.5) * H;

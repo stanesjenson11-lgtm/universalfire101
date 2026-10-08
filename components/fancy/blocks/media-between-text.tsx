@@ -211,6 +211,8 @@ export const MediaBetweenText = forwardRef<
             <img
               src={mediaUrl}
               alt={alt || `${firstText} ${secondText}`}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
             />
           )}

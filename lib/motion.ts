@@ -3,13 +3,12 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText } from "gsap/SplitText";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, SplitText);
+  gsap.registerPlugin(ScrollTrigger);
 }
 
-export { gsap, ScrollTrigger, SplitText };
+export { gsap, ScrollTrigger };
 
 /** useLayoutEffect warns during SSR; useEffect is the correct server fallback. */
 export const useIsoLayoutEffect =
@@ -31,9 +30,42 @@ export function loaderDone(): Promise<void> {
   return Promise.all(lift.map((a) => a.finished.catch(() => {}))).then(() => {});
 }
 
+let engagedOnce: Promise<void> | null = null;
+/**
+ * Resolves once someone is here — a scroll, wheel, touch, pointer or key — and
+ * the preloader has lifted; or 5 s after it lifts if no one has moved. The 3D
+ * and the fire's WebGL wait for it: megabytes and a GPU warm-up that no one
+ * needs before they move (a still of the extinguisher stands in until then),
+ * kept off a slow phone's first seconds.
+ */
+export function engaged(): Promise<void> {
+  return (engagedOnce ??= new Promise<void>((resolve) => {
+    const kinds = ["scroll", "wheel", "pointermove", "pointerdown", "touchstart", "keydown"];
+    let moved = false;
+    let lifted = false;
+    let timer = 0;
+    const done = () => {
+      if (!moved || !lifted) return;
+      kinds.forEach((k) => window.removeEventListener(k, go));
+      clearTimeout(timer);
+      resolve();
+    };
+    const go = () => {
+      moved = true;
+      done();
+    };
+    kinds.forEach((k) => window.addEventListener(k, go, { passive: true }));
+    loaderDone().then(() => {
+      lifted = true;
+      timer = window.setTimeout(go, 5000);
+      done();
+    });
+  }));
+}
+
 /**
  * Minimal stand-in for @gsap/react's useGSAP — scopes selector text to a ref
- * and reverts every tween, ScrollTrigger and SplitText on unmount.
+ * and reverts every tween and ScrollTrigger on unmount.
  *
  * Bails out entirely under reduced motion. That is safe because every section
  * renders complete and visible by default; animation only ever enhances, so

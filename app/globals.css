@@ -485,6 +485,15 @@
   background: linear-gradient(180deg, rgb(255 255 255 / 0.55), transparent 46%);
 }
 
+/* The still of the extinguisher in the fireman's hand (CityScene) until the
+   3D arrives (ShotStage), then the model fades in over it as it fades out. */
+[data-ext-poster] {
+  transition: opacity 500ms ease-out;
+}
+.ext-live [data-ext-poster] {
+  opacity: 0;
+}
+
 /* The hero's call to action, lettered on the fire engine like its livery:
    the cream of its stripe, the hero's wide face. */
 .uf-livery text {
@@ -641,20 +650,24 @@
 }
 
 /* ==========================================================================
-   Loader — home only, CSS only. ~1.85s: needle sweep 0–0.76s, fill
-   0.7–1.15s, lift 1.25–1.85s. Every step is a transform, so it all runs on
-   the compositor: smooth while the page lays out and hydrates underneath
-   (a stroke-dash drawing can only animate on the main thread, and stalled).
+   Loader — home only, CSS only. 2.06s, the site's story in miniature: a gauge
+   needle sweeps round and uncovers the emblem (0–0.6s); fire rises through
+   it, ember orange under a row of flickering tongues, a heat glow behind
+   (0.45–0.95s); foam comes down over it and puts it out, white (0.95–1.3s);
+   it holds a beat while the page paints underneath (~180ms of GPU raster);
+   the shutter lifts (1.54–2.06s). Every step is a transform or an opacity, one animation per
+   property per element, so it all runs on the compositor: smooth while the
+   page lays out and hydrates underneath.
    ========================================================================== */
 
 /* The shutter: the black lifts while what is on it holds still (a counter-
    move), so its bottom edge wipes up over the emblem. */
 .uf-loader {
-  visibility: visible; /* over <main>'s, which hides the page under it (below) */
-  animation: uf-lift 600ms cubic-bezier(0.7, 0, 0.2, 1) 1250ms both;
+  visibility: visible;
+  animation: uf-lift 520ms cubic-bezier(0.7, 0, 0.2, 1) 1540ms both;
 }
 .uf-loader > * {
-  animation: uf-hold 600ms cubic-bezier(0.7, 0, 0.2, 1) 1250ms both;
+  animation: uf-hold 520ms cubic-bezier(0.7, 0, 0.2, 1) 1540ms both;
 }
 /* Transform only (a visibility step would keep it off the compositor); it
    ends off-screen and click-through, which is gone enough. */
@@ -668,49 +681,161 @@
     transform: translateY(100%);
   }
 }
-/* After the outline: solid white rises inside it from the bottom, a gauge
-   filling — a window moving up over a counter-moving emblem. */
-.uf-fill {
-  transform: translateY(100%);
-  animation: uf-rise 450ms var(--ease-out-quart) 700ms forwards;
-}
-.uf-fill > * {
-  transform: translateY(-100%);
-  animation: uf-rise 450ms var(--ease-out-quart) 700ms forwards;
-}
-@keyframes uf-rise {
-  to {
-    transform: none;
-  }
-}
+
 /* A gauge needle sweeps once round and uncovers the line art: two black
    halves turning away, right then left. One easeInOutQuad split at half way
    (in, then out), so the needle's speed matches where the halves meet. */
 .uf-sweep-a {
-  animation: uf-sweep 380ms cubic-bezier(0.11, 0, 0.5, 0) both;
+  animation: uf-sweep 300ms cubic-bezier(0.11, 0, 0.5, 0) both;
 }
 .uf-sweep-b {
-  animation: uf-sweep 380ms cubic-bezier(0.5, 1, 0.89, 1) 380ms both;
+  animation: uf-sweep 300ms cubic-bezier(0.5, 1, 0.89, 1) 300ms both;
 }
 /* Each half hides the moment its turn is done (no hairline on the seam). */
 .uf-half-a {
-  animation: uf-gone 1ms 380ms forwards;
+  animation: uf-gone 1ms 300ms forwards;
 }
 .uf-half-b {
-  animation: uf-gone 1ms 760ms forwards;
+  animation: uf-gone 1ms 600ms forwards;
+}
+/* The second half's needle waits for its turn (it sits on show at 6 o'clock). */
+.uf-needle-b {
+  animation: uf-show 1ms 300ms both;
+}
+@keyframes uf-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(180deg);
+  }
 }
 @keyframes uf-gone {
   to {
     opacity: 0;
   }
 }
-/* The page under the loader stays unpainted (laid out, so every scroll
-   position is right) until the fill is done: otherwise the GPU rasterises the
-   hero — its animated city, the web-font swap — under the black, and the
-   needle hitches. It paints in the beat before the shutter lifts. */
+@keyframes uf-show {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Fire, then foam: each a window moving over a counter-moving emblem (so the
+   emblem holds still while its colour changes from one edge), with a rider
+   that travels on the same curve and carries that edge — flame tongues on the
+   fire's, bubbles on the foam's. All of it clipped to the emblem's circle. */
+.uf-fire,
+.uf-fire-rider {
+  transform: translateY(100%);
+  animation: uf-settle 500ms cubic-bezier(0.3, 0, 0.2, 1) 450ms forwards;
+}
+.uf-fire > * {
+  transform: translateY(-100%);
+  animation: uf-settle 500ms cubic-bezier(0.3, 0, 0.2, 1) 450ms forwards;
+}
+.uf-foam,
+.uf-foam-rider {
+  transform: translateY(-100%);
+  animation: uf-settle 350ms var(--ease-out-quart) 950ms forwards;
+}
+.uf-foam > * {
+  transform: translateY(100%);
+  animation: uf-settle 350ms var(--ease-out-quart) 950ms forwards;
+}
+@keyframes uf-settle {
+  to {
+    transform: none;
+  }
+}
+/* The tongues show with the fire, flicker (two layers, out of step) and die
+   as the foam comes down. They ride the fire's edge, which starts below the
+   emblem, so they wait for it: their wrapper shows them 0.45–0.97s and fades
+   them by 1.19s, in one animation (two on one property would not composite). */
+.uf-tongue-life {
+  opacity: 0;
+  animation: uf-tongue-life 1190ms linear both;
+}
+@keyframes uf-tongue-life {
+  0%,
+  37.8% {
+    opacity: 0;
+  }
+  37.9%,
+  81.5% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.uf-tongues {
+  transform-origin: 50% 100%;
+  animation: uf-flicker 160ms ease-in-out infinite alternate;
+}
+.uf-tongues + .uf-tongues {
+  animation: uf-flicker 110ms ease-in-out 40ms infinite alternate-reverse;
+}
+/* The foam's bubbly front: it rides the foam's edge, which starts above the
+   emblem, so it waits for it — shown 0.95–1.15s (the foam is 97% down by
+   then), gone by 1.24s, when everything has stopped for the page to paint. */
+.uf-bubbles {
+  opacity: 0;
+  animation: uf-bubble-life 1240ms linear both;
+}
+@keyframes uf-bubble-life {
+  0%,
+  76.6% {
+    opacity: 0;
+  }
+  76.7%,
+  92.7% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes uf-flicker {
+  from {
+    transform: scaleY(0.82) scaleX(1.02);
+  }
+  to {
+    transform: scaleY(1.12) scaleX(0.98);
+  }
+}
+/* The heat behind the emblem: up with the fire, gone under the foam. */
+.uf-glow {
+  opacity: 0;
+  animation: uf-heat 790ms linear 450ms forwards; /* out by 1.24s too */
+}
+@keyframes uf-heat {
+  45% {
+    opacity: 0.42;
+  }
+  60% {
+    opacity: 0.42;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* The heavy part of the page under the loader — the hero's city (hundreds of
+   SVG shapes), the nav, everything below the hero — stays unpainted (laid
+   out, so every scroll position is right) until the foam has landed:
+   otherwise the GPU rasterises it under the black and the animation hitches.
+   It paints in the still beat before the shutter lifts. The hero's words are
+   cheap and paint at once, so the page's main content is there from the
+   first paint. */
 @media (prefers-reduced-motion: no-preference) {
-  body:has(.uf-loader) :is(body > header, main, body > footer) {
-    animation: uf-unveil 1ms 1150ms both;
+  /* main as a whole, not its children: ScrollTrigger wraps pinned sections in
+     new elements at load, and a new element starts its own copy of this. */
+  body:has(.uf-loader) #top {
+    visibility: visible;
+  }
+  body:has(.uf-loader) :is(body > header, main, body > footer, #top > svg) {
+    animation: uf-unveil 1ms 1240ms both; /* the foam's last pixels of easing in, ~still */
   }
 }
 @keyframes uf-unveil {
@@ -719,23 +844,6 @@
   }
   to {
     visibility: visible;
-  }
-}
-/* The second half's needle waits for its turn (it sits on show at 6 o'clock). */
-.uf-needle-b {
-  animation: uf-show 1ms 380ms both;
-}
-@keyframes uf-show {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes uf-sweep {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(180deg);
   }
 }
 

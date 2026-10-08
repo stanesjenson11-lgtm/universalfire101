@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { Renderer, Program, Mesh, Triangle } from "ogl";
 import { vertex, fragment, MAX_BLOBS } from "./fire-foam-shaders";
 import { foamBlobs, foamSlots, fireLeft, SPREAD, THRESHOLD } from "@/lib/foam";
-import { loaderDone, prefersReduced } from "@/lib/motion";
+import { engaged, prefersReduced } from "@/lib/motion";
 import { shot } from "@/lib/shot";
 
 const PHONE = "(max-width: 620px)";
@@ -23,8 +23,9 @@ export default function FireFoamCanvas() {
   useEffect(() => {
     const el = host.current;
     if (!el || prefersReduced()) return;
-    // Waits for the preloader to lift: compiling this shader on the GPU
-    // would otherwise stall the frames of the preloader's animation.
+    // Waits for someone to be here and the preloader to have lifted: the
+    // shader compile is GPU work the first seconds do not need (it is below
+    // the fold), and it would stall the preloader's frames.
     const mount = () => {
       const phone = window.matchMedia(PHONE).matches;
 
@@ -125,7 +126,7 @@ export default function FireFoamCanvas() {
     };
     let stop: (() => void) | undefined;
     let gone = false;
-    loaderDone().then(() => void (gone || (stop = mount())));
+    engaged().then(() => void (gone || (stop = mount())));
     return () => {
       gone = true;
       stop?.();

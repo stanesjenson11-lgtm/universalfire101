@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap, prefersReduced } from "@/lib/motion";
+import { gsap, loaderDone, prefersReduced } from "@/lib/motion";
 
 /*
  * The hero's city at night, drawn flat (no gradients) in a 1600 × 900 box
@@ -177,9 +177,14 @@ export default function CityScene() {
     if (!svg) return;
     const reduced = prefersReduced();
     const ctx = gsap.context(() => {
+      // The ambient motion — flames, a few stars, the beacon — runs only while
+      // the hero is on screen and the preloader has lifted, like the incidents
+      // below: a tween left running off screen still costs a style write every
+      // frame, on every phone, all the way down the page.
+      const ambient: gsap.core.Animation[] = [];
       // Flames never sit still.
-      svg.querySelectorAll<SVGPathElement>(".lick").forEach((el, i) => {
-        gsap.to(el, {
+      if (!reduced) svg.querySelectorAll<SVGPathElement>(".lick").forEach((el, i) => {
+        ambient.push(gsap.to(el, {
           scaleY: 1.18,
           scaleX: 0.9,
           skewX: (i % 2 ? 1 : -1) * 4,
@@ -188,12 +193,16 @@ export default function CityScene() {
           repeat: -1,
           yoyo: true,
           ease: "sine.inOut",
-        });
+          paused: true,
+        }));
       });
-      svg.querySelectorAll(".star").forEach((el, i) => {
-        gsap.to(el, { opacity: 0.1, duration: 1.4 + rnd(i + 40) * 2, repeat: -1, yoyo: true, ease: "sine.inOut", delay: rnd(i) * 2 });
+      // Every third star twinkles; the rest hold still (a sky full of tweens
+      // was the scene's biggest per-frame cost).
+      if (!reduced) svg.querySelectorAll(".star").forEach((el, i) => {
+        if (i % 3) return;
+        ambient.push(gsap.to(el, { opacity: 0.1, duration: 1.4 + rnd(i + 40) * 2, repeat: -1, yoyo: true, ease: "sine.inOut", delay: rnd(i) * 2, paused: true }));
       });
-      gsap.to(svg.querySelector(".beacon"), { opacity: 0.2, duration: 0.45, repeat: -1, yoyo: true, ease: "steps(1)" });
+      if (!reduced) ambient.push(gsap.to(svg.querySelector(".beacon"), { opacity: 0.2, duration: 0.45, repeat: -1, yoyo: true, ease: "steps(1)", paused: true }));
 
       // One incident: it catches, a fireman aims and foams it, it dies to smoke.
       const incident = (i: number) => {
@@ -217,15 +226,28 @@ export default function CityScene() {
           .to(foam, { opacity: 0, duration: 0.9 }, "-=0.4");
       };
 
-      const loop = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
+      const loop = gsap.timeline({ repeat: -1, repeatDelay: 0.6, paused: true });
       CREW.forEach((_, i) => loop.add(incident(i), i * 2.1));
       if (reduced) loop.pause(2.6); // one still moment: two fires, one being foamed
 
-      // Only animate while the hero is on screen.
+      // Only animate while the hero is on screen, and not under the preloader.
+      let onScreen = false;
+      let lifted = false;
+      const run = () => {
+        if (reduced) return;
+        const go = onScreen && lifted;
+        loop.paused(!go);
+        ambient.forEach((t) => t.paused(!go));
+      };
       const io = new IntersectionObserver(([e]) => {
-        if (!reduced) loop.paused(!e.isIntersecting);
+        onScreen = e.isIntersecting;
+        run();
       });
       io.observe(svg);
+      loaderDone().then(() => {
+        lifted = true;
+        run();
+      });
       return () => io.disconnect();
     }, svg);
     return () => ctx.revert();
@@ -373,6 +395,11 @@ export default function CityScene() {
       <Holder />
       {/* The extinguisher in his hand: top just above the grip, foot just off the street. */}
       <rect data-ext="home" x={r1(HAND.x - 24)} y={r1(HAND.y - 10)} width="48" height="112" fill="none" />
+      {/* A still of the 3D extinguisher as it stands in his hand, rendered from
+          the model at 1440×900 (where these units are pixels): the hero has it
+          from the first paint, before the 3D loads (ShotStage), and it gives
+          way to the model as that fades in (globals.css, .ext-live). */}
+      <image data-ext-poster href="/site/extinguisher-hand.webp" x="914.5" y="745.5" width="70.5" height="122" />
     </svg>
   );
 }

@@ -156,13 +156,20 @@ const sticker = svg(
    <text x="150" y="142" font-family="Arial, sans-serif" font-size="17" fill="#1d1d1f">IS 15683 · ISI · BIS approved</text>
    <text x="150" y="164" font-family="Arial, sans-serif" font-size="15" fill="#555">+91 98430 77907 · 24/7</text>`,
 );
-await sharp(T("body_diff"))
-  .composite([
-    { input: plate, left: 30, top: 50 },
-    { input: sticker, left: 391, top: 1201 },
-  ])
-  .jpeg({ quality: 86, mozjpeg: true })
-  .toFile(path.join(OUT, "body_diff.jpg"));
+// Composited at the scan's 2K so the lettering lands where it should, then
+// written at 1K: the model is never drawn more than ~620px tall, and 1K is a
+// quarter of the download and of the GPU upload (a phone's main concern).
+const at1k = async (buf, out, quality) => sharp(buf).resize(1024).jpeg({ quality, mozjpeg: true }).toFile(path.join(OUT, out));
+await at1k(
+  await sharp(T("body_diff"))
+    .composite([
+      { input: plate, left: 30, top: 50 },
+      { input: sticker, left: 391, top: 1201 },
+    ])
+    .toBuffer(),
+  "body_diff.jpg",
+  86,
+);
 
 // Inspection tag: the blank back of the tag laid over the Korean front, then
 // an English record printed on it (multiplied, so the paper's wear shows).
@@ -186,7 +193,7 @@ const tagBase = await sharp(T("paper_diff"))
 // (sharp resizes before it composites, so the print goes on at full size first)
 const printed = await sharp(tagBase).composite([{ input: record, left: 32, top: 46, blend: "multiply" }]).toBuffer();
 await sharp(printed)
-  .resize(1024)
+  .resize(512)
   .jpeg({ quality: 84, mozjpeg: true })
   .toFile(path.join(OUT, "paper_diff.jpg"));
 
@@ -194,14 +201,15 @@ await sharp(printed)
 // map, and would still catch the light as ghost letters: flatten both under
 // the repainted plate (flat normal = rgb 128,128,255; AO 1, mid rough, no metal).
 const flat = (rgb) => svg(620, 170, `<rect width="620" height="170" fill="${rgb}"/>`);
-await sharp(T("body_nor_gl")).composite([{ input: flat("rgb(128,128,255)"), left: 30, top: 50 }]).jpeg({ quality: 88, mozjpeg: true }).toFile(path.join(OUT, "body_nor_gl.jpg"));
-await sharp(T("body_arm")).composite([{ input: flat("rgb(255,150,0)"), left: 30, top: 50 }]).jpeg({ quality: 86, mozjpeg: true }).toFile(path.join(OUT, "body_arm.jpg"));
+await at1k(await sharp(T("body_nor_gl")).composite([{ input: flat("rgb(128,128,255)"), left: 30, top: 50 }]).toBuffer(), "body_nor_gl.jpg", 88);
+await at1k(await sharp(T("body_arm")).composite([{ input: flat("rgb(255,150,0)"), left: 30, top: 50 }]).toBuffer(), "body_arm.jpg", 86);
 
-// The rest as they are, the small ones at 1K.
+// The rest as they are. The tag and the gauge glass are never drawn more than
+// ~60px across, so 512 is plenty for them (the tag's print above too).
 const copy = async (n, size) => sharp(T(n)).resize(size).jpeg({ quality: 84, mozjpeg: true }).toFile(path.join(OUT, `${n}.jpg`));
 await Promise.all([
-  copy("paper_arm", 1024), copy("paper_nor_gl", 1024),
-  copy("glass_diff", 1024), copy("glass_arm", 1024), copy("glass_nor_gl", 1024),
+  copy("paper_arm", 512), copy("paper_nor_gl", 512),
+  copy("glass_diff", 512), copy("glass_arm", 512), copy("glass_nor_gl", 512),
 ]);
 for (const img of g.images) img.uri = path.basename(img.uri).replace(`${NAME}_`, "").replace("_2k", "");
 

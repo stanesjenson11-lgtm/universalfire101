@@ -158,18 +158,26 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     move?: { rocket?: boolean; trail?: boolean };
   };
   // Same order for both (index 0 about, 1 the hand-over, 2 products).
-  const PHONE: Pose[] = [
-    { sel: "#about", side: 0, fx: 1.3, y: 0.82, h: 0.1, yaw: 0.7, tilt: -0.3, o: 0 }, // off right while you read
-    // The exploded view's opening frame (y, h and pitch measured, below).
-    { sel: "#inside", side: 0, fx: 0.5, y: 0.6, h: 0.5, yaw: -0.95, tilt: 0, pitch: 0.12, o: 1, exact: true, move: { rocket: true } },
-    { sel: "#products", side: 0, fx: 1.25, y: 1.35, h: 0.1, yaw: -0.5, tilt: 0, o: 0, move: { rocket: true, trail: true } },
-    // Up into the 24/7 band, above the call buttons (they sit bottom right).
-    // Not on phones: the band has no room for it there, so its last move is
-    // the rocket out after the exploded view.
-    ...(portrait
-      ? []
-      : [{ sel: "footer", side: 0, fx: 0.88, y: 0.06, h: 0.1, yaw: -0.5, tilt: 0, o: 1, onPage: true, exact: true, move: { trail: true } }]),
-  ];
+  const PHONE: Pose[] = portrait
+    ? [
+        // Phones: out of sight while you read the profile (off the right edge).
+        { sel: "#about", side: 0, fx: 1.3, y: 0.82, h: 0.05, yaw: 0.7, tilt: 0, o: 0 },
+        // The exploded view's opening frame (y, h and pitch measured, below).
+        { sel: "#inside", side: 0, fx: 0.5, y: 0.6, h: 0.5, yaw: -0.95, tilt: 0, pitch: 0.12, o: 1, exact: true, move: { rocket: true } },
+        // Parked very small in the bottom-left corner by the product cards, on
+        // the screen's edge, clear of the cards' words…
+        { sel: "#products", side: 0, fx: 0.04, y: 0.93, h: 0.06, yaw: -0.5, tilt: 0.12, o: 1, move: { trail: true } },
+        // …then off, with a boost, as the numbers come up. No finale: the 24/7
+        // band has no room for it on a phone.
+        { sel: "#specs", side: 0, fx: -0.3, y: 1.3, h: 0.07, yaw: -0.5, tilt: 0, o: 0, move: { rocket: true, trail: true } },
+      ]
+    : [
+        { sel: "#about", side: 0, fx: 1.3, y: 0.82, h: 0.1, yaw: 0.7, tilt: -0.3, o: 0 }, // off right while you read
+        { sel: "#inside", side: 0, fx: 0.5, y: 0.6, h: 0.5, yaw: -0.95, tilt: 0, pitch: 0.12, o: 1, exact: true, move: { rocket: true } },
+        { sel: "#products", side: 0, fx: 1.25, y: 1.35, h: 0.1, yaw: -0.5, tilt: 0, o: 0, move: { rocket: true, trail: true } },
+        // Up into the 24/7 band, above the call buttons (they sit bottom right).
+        { sel: "footer", side: 0, fx: 0.88, y: 0.06, h: 0.1, yaw: -0.5, tilt: 0, o: 1, onPage: true, exact: true, move: { trail: true } },
+      ];
   const POSES = (!roomy ? PHONE : [
     { sel: "#about", side: 1, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 1 },
     // The exploded view's opening frame: centred, 69% of the screen, facing -0.95.
@@ -189,7 +197,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0, ins: 0 };
   let lastY = window.scrollY;
   let moved = 0; // px scrolled since the last frame
-  const companionPose = (time: number) => {
+  const companionPose = () => {
     // The hand-over pose, as the exploded view measured its opening frame.
     if (shot.insideOpen) Object.assign(POSES[1], shot.insideOpen);
     // Where a section takes over: mid-screen on desktop; on phones and tablets
@@ -210,10 +218,8 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const sx = (p: Pose) => (p.fx !== undefined ? W * p.fx : p.side > 0 ? W - margin : margin);
     // onPage poses sit on their section (y from its top) and scroll with it.
     const py = (p: Pose) => (p.onPage ? p.el!.getBoundingClientRect().top + p.y * H : p.y * H);
-    // Exact poses (the hand-over, the finale) get no idle drift.
-    const ex = lerp(cur.exact ? 1 : 0, next.exact ? 1 : 0, t);
     pose.x = lerp(sx(cur), sx(next), t);
-    pose.y = lerp(py(cur), py(next), t) + Math.sin(time * 0.7) * H * 0.012 * (1 - ex);
+    pose.y = lerp(py(cur), py(next), t);
     // Phones and tablets: small on the move — it only grows in the last tenth
     // of the scroll as it docks with the exploded view, and is small again
     // within the first eighth after it leaves (by scroll, not the eased move).
@@ -222,7 +228,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     // Drifts idly up to the exploded view; from the products on it turns with
     // the scroll instead (one turn every five screens or so).
     const spin = Math.max(0, H - POSES[2].el!.getBoundingClientRect().top) / H * 1.2;
-    pose.yaw = lerp(cur.yaw, next.yaw, t) + (c === 0 ? Math.sin(time * 0.25) * 0.6 * (1 - ex) : spin);
+    pose.yaw = lerp(cur.yaw, next.yaw, t) + (c === 0 ? 0 : spin);
     pose.pitch = lerp(cur.pitch ?? 0, next.pitch ?? 0, t);
     // How far into the hand-over pose: it takes on the exploded view's light.
     pose.ins = c === 0 ? t : c === 1 ? 1 - t : 0;
@@ -233,7 +239,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     pose.o = lerp(cur.o, next.o, next.o < cur.o ? t * t * t : t) * (1 - merged);
     moved = Math.abs(window.scrollY - lastY);
     lastY = window.scrollY;
-    pose.tilt = lerp(cur.tilt, next.tilt, t) + Math.sin(time * 0.5) * 0.04 * (1 - ex);
+    pose.tilt = lerp(cur.tilt, next.tilt, t);
     // Long moves: rocket and/or trail, as the pose it is heading for says.
     const dx = sx(next) - sx(cur);
     const dy = py(next) - py(cur);
@@ -347,17 +353,16 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     rig.position.set(base.x, base.y + h / 2 + hop, 0);
     rig.scale.setScalar(scale);
 
-    // Facing: three-quarter in the hero with a slow idle sway, turning to put
-    // the hose toward the fire as it lands. Tumble: one full turn, end over end.
-    const idle = still ? 0 : Math.sin(time * 0.35) * 0.18 * (1 - e);
-    rig.rotation.y = lerp(-0.75, -0.3, e) + idle;
+    // Facing: three-quarter in the hero, turning to put the hose toward the
+    // fire as it lands. Tumble: one full turn, end over end.
+    rig.rotation.y = lerp(-0.75, -0.3, e);
     const lean = r < 0.1 ? -Math.sin((r / 0.1) * Math.PI) * 0.08 : 0;
     rig.rotation.z = -Math.PI * 2 * e + lean;
 
     // Into companion mode as the fire section leaves.
     let o = 1;
     if (after > 0) {
-      companionPose(time);
+      companionPose();
       const blend = inOut(after);
       const target = world(pose.x, pose.y);
       rig.position.lerp(target, blend);
@@ -380,10 +385,13 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const pulled = smooth(0.0, 0.05, s);
     parts.pin.position.set(pinRest.x + pulled * 0.12, pinRest.y - smooth(0.04, 0.12, s) * 0.5, pinRest.z);
     parts.pin.visible = s < 0.12 || after > 0.5;
-    // Then the hose comes up and points at the fire, ~106° from hanging (below
-    // 1280px ~77°: level, so it never crosses the words above it)
-    // — and hangs back down once the job is done and it moves on.
-    hosePivot.rotation.z = -(narrow ? 1.35 : 1.85) * inOut(smooth(0.02, 0.09, s)) * (1 - inOut(after));
+    // Then the hose comes up and points at the fire, ~106° from hanging. Phones:
+    // up further, ~130°, the nozzle facing the words above (the extinguisher is
+    // small and low there, so it never reaches them). Tablets and small laptops
+    // ~77°: level, so it never crosses the words beside it. It hangs back down
+    // once the job is done and it moves on.
+    const raise = portrait ? 2.25 : narrow ? 1.35 : 1.85;
+    hosePivot.rotation.z = -raise * inOut(smooth(0.02, 0.09, s)) * (1 - inOut(after));
     const spraying = s > 0.06 && s < 0.9;
     if (spraying) rig.position.x += Math.sin(time * 47) * 0.0025 * scale;
 
@@ -429,7 +437,26 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     renderer.render(scene, camera);
   };
 
-  const tick = () => apply(performance.now() / 1000);
+  // Draw only when something moved: the scroll, the window, foam still in the
+  // air, or a few frames after a change (a refresh, the model arriving). It
+  // rests when the page does — no idle sway — so a still page costs nothing
+  // here, which is most of a phone's battery and of a slow page's main thread.
+  let seenY = NaN;
+  let seenW = 0;
+  let seenH = 0;
+  let settle = 8;
+  const wake = () => void (settle = 4);
+  ScrollTrigger.addEventListener("refresh", wake);
+  const tick = () => {
+    if (window.scrollY !== seenY || window.innerWidth !== seenW || window.innerHeight !== seenH) {
+      seenY = window.scrollY;
+      seenW = window.innerWidth;
+      seenH = window.innerHeight;
+      settle = 2;
+    } else if (settle <= 0 && !puffs.length) return;
+    settle--;
+    apply(performance.now() / 1000);
+  };
   stage.appendChild(fx);
   stage.appendChild(canvas);
   document.documentElement.classList.add("ext-live");
@@ -463,6 +490,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
 
   return () => {
     gsap.ticker.remove(tick);
+    ScrollTrigger.removeEventListener("refresh", wake);
     ctx?.revert();
     window.removeEventListener("resize", resize);
     renderer.dispose();

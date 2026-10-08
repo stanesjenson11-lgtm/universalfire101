@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useInView } from "motion/react";
 import { home, page, products, services, type Block } from "@/lib/content";
 import Rich from "@/components/ui/Rich";
 import { gsap, prefersReduced, ScrollTrigger, useGsap } from "@/lib/motion";
@@ -424,6 +425,10 @@ const HOSE =
 export function Equipment() {
   const { heading, body, items } = home.equipment;
   const scope = useLock();
+  // The hose's pictures only travel while it is near the screen: the marquee
+  // otherwise updates a dozen positions every frame, all the way down the page.
+  const hose = useRef<HTMLDivElement>(null);
+  const near = useInView(hose, { margin: "200px 0px" });
   return (
     <section ref={scope} id="equipment" data-ground="dark" className="frame on-black relative overflow-hidden">
       <div className="mx-auto max-w-[72rem] px-gutter text-center">
@@ -431,14 +436,14 @@ export function Equipment() {
         <p className="mx-auto mt-5 max-w-[52ch] text-lead text-muted-dark">{body}</p>
       </div>
       {/* Phones: the hose three screens wide, centred, so its pictures are big enough to read. */}
-      <div className="relative mt-6 min-h-0 flex-1 text-fire-deep max-[760px]:-ml-[100vw] max-[760px]:w-[300vw] [&_path]:[stroke-linecap:round] [&_path]:[stroke-width:20px] [&_svg]:overflow-visible">
+      <div ref={hose} className="relative mt-6 min-h-0 flex-1 text-fire-deep max-[760px]:-ml-[100vw] max-[760px]:w-[300vw] [&_path]:[stroke-linecap:round] [&_path]:[stroke-width:20px] [&_svg]:overflow-visible">
         <MarqueeAlongSvgPath
           path={HOSE}
           pathId="uf-hose"
           viewBox="0 0 1600 400"
           showPath
           responsive
-          baseVelocity={4}
+          baseVelocity={near ? 4 : 0}
           slowdownOnHover
           repeat={1}
           enableRollingZIndex={false}

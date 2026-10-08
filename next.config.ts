@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
   poweredByHeader: false,
+  experimental: {
+    // The stylesheet (13 KB, Tailwind) goes in the page's <head>: one less
+    // request before the first paint, which is the preloader's.
+    inlineCss: true,
+  },
   images: {
     // Every size is already a file in public/_img (scripts/images.mjs).
     loader: "custom",

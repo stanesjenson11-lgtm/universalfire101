@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 /**
  * The photoreal extinguisher: Poly Haven's CC0 scan, split into its real parts
@@ -17,14 +17,17 @@ export const HEIGHT = 0.659;
 let gltf: Promise<GLTF> | null = null;
 export const loadExtinguisher = () => (gltf ??= new GLTFLoader().loadAsync("/models/extinguisher/extinguisher.gltf"));
 
-let hdr: Promise<THREE.DataTexture> | null = null;
-/** The studio HDRI, prefiltered for one renderer (WebGL textures are per context). */
+/**
+ * The studio light it is seen in: three.js's procedural room, prefiltered for
+ * one renderer (WebGL textures are per context). Built in code rather than
+ * downloaded — the HDRI it replaces was 1.6 MB, more than the whole model.
+ */
 export async function studioEnvironment(renderer: THREE.WebGLRenderer) {
-  const tex = await (hdr ??= new HDRLoader().loadAsync("/models/env/studio_small_09_1k.hdr"));
-  tex.mapping = THREE.EquirectangularReflectionMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const env = pmrem.fromEquirectangular(tex).texture;
+  const room = new RoomEnvironment();
+  const env = pmrem.fromScene(room, 0.04).texture;
   pmrem.dispose();
+  room.dispose();
   return env;
 }
 
@@ -69,6 +72,21 @@ export async function extinguisher(options: { ownMaterials?: boolean } = {}) {
   parts.foot = foot();
   root.add(parts.foot);
   return { root, parts };
+}
+
+/**
+ * A part's own bounds, in its mesh's space. The scan's parts share one vertex
+ * buffer and differ only in the triangles they draw, so a geometry's bounding
+ * box is the whole extinguisher's: measure the vertices this part indexes.
+ */
+export function partBox(m: THREE.Mesh) {
+  const p = m.geometry.getAttribute("position");
+  const index = m.geometry.getIndex();
+  const box = new THREE.Box3();
+  if (!index) return box.setFromBufferAttribute(p as THREE.BufferAttribute);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < index.count; i++) box.expandByPoint(v.fromBufferAttribute(p, index.getX(i)));
+  return box;
 }
 
 /**
