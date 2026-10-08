@@ -66,12 +66,23 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   rim.position.set(4, 3, -4);
   const fireLight = new THREE.PointLight("#ff6a2b", 0, 0, 1.6); // the flames, from below-left
   scene.add(key, rim, fireLight);
+  // The exploded view's lights (components/gl/exploded.ts), turned by the pitch
+  // the companion takes for the hand-over: it arrives lit the way it is there.
+  const X = new THREE.Vector3(1, 0, 0);
+  const keyOut = key.position.clone();
+  const rimOut = rim.position.clone();
+  const keyIn = new THREE.Vector3(-3, 5, 5).applyAxisAngle(X, 0.14);
+  const rimIn = new THREE.Vector3(4, 2, -4).applyAxisAngle(X, 0.14);
+  const cool = new THREE.Color("#9fb6ff");
+  const warm = new THREE.Color("#ff9a5c");
 
   // Rig origin at the model's centre, so the tumble turns about its middle.
   const { root, parts } = model;
   root.position.set(0, -HEIGHT / 2, -0.03);
   const rig = new THREE.Group();
-  rig.rotation.order = "ZYX"; // turn to face first, then tumble in the screen's plane
+  // Turn to face, then pitch toward the camera (as the exploded view's camera
+  // looks down), then tumble in the screen's plane.
+  rig.rotation.order = "ZXY";
   rig.add(root);
   scene.add(rig);
   const shadow = contactShadow(0.42, 0.8);
@@ -150,9 +161,9 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     // (moves under the left margin unseen, to rise back up there)
     { sel: "#licence", side: -1, y: 1.45, h: 0.24, yaw: -0.5, tilt: 0.1, o: 0 },
     { sel: "#contact", side: -1, y: 0.62, h: 0.24, yaw: -0.5, tilt: 0.1, o: 1 },
-    { sel: "footer", side: 1, y: 0.3, h: 0.34, yaw: -0.5, tilt: 0, o: 1, fx: 0.58, onPage: true, exact: true, move: { trail: true } }, // upright in the 24/7 band
+    { sel: "footer", side: 1, y: 0.16, h: 0.24, yaw: -0.5, tilt: 0, o: 1, fx: 0.58, onPage: true, exact: true, move: { trail: true } }, // upright in the 24/7 band
   ] as Pose[]).map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
-  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0 };
+  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0, ins: 0 };
   let lastY = window.scrollY;
   let lean = 0;
   let speed = 0;
@@ -181,8 +192,11 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const spin = Math.max(0, H - POSES[2].el!.getBoundingClientRect().top) / H * 1.2;
     pose.yaw = lerp(cur.yaw, next.yaw, t) + (c === 0 ? Math.sin(time * 0.25) * 0.6 * (1 - ex) : spin);
     pose.pitch = lerp(cur.pitch ?? 0, next.pitch ?? 0, t);
-    // While the exploded view holds the screen, it is the exploded model.
-    const merged = c === 1 ? smooth(0.015, 0.05, shot.inside) * (1 - smooth(0.95, 0.985, shot.inside)) : 0;
+    // How far into the hand-over pose: it takes on the exploded view's light.
+    pose.ins = c === 0 ? t : c === 1 ? 1 - t : 0;
+    // While the exploded view holds the screen, it is the exploded model. That
+    // one is already showing underneath, identical, so this one just fades.
+    const merged = c === 1 ? smooth(0.006, 0.05, shot.inside) * (1 - smooth(0.95, 0.99, shot.inside)) : 0;
     // Fading out it holds on until it is nearly off the screen.
     pose.o = lerp(cur.o, next.o, next.o < cur.o ? t * t * t : t) * (1 - merged);
     // Leans into the scroll, a beat behind it.
@@ -329,6 +343,13 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     fireLight.position.set(rig.position.x - h * 1.2, base.y + h * 0.2, h * 0.8);
     fireLight.intensity = 6 * firePresence * fireLeft(s) * (0.85 + 0.15 * Math.sin(time * 9.7) * Math.sin(time * 6.1));
     rim.intensity = 1.1 * (1 - firePresence * 0.7);
+    const ins = after > 0 ? pose.ins * inOut(after) : 0;
+    key.intensity = lerp(1.6, 1.4, ins);
+    key.position.lerpVectors(keyOut, keyIn, ins);
+    rim.position.lerpVectors(rimOut, rimIn, ins);
+    rim.color.lerpColors(cool, warm, ins);
+    rim.intensity = lerp(rim.intensity, 2, ins);
+    scene.environmentIntensity = lerp(0.85, 0.9, ins);
 
     // The nozzle opening, into fire-section space for the foam.
     rig.updateMatrixWorld(true);

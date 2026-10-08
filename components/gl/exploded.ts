@@ -48,7 +48,9 @@ type Els = {
  *   0.10–0.32  a quarter of the cylinder is cut away: wall, powder, siphon tube
  *   0.32–0.60  the parts lift off along their own axes, callouts draw in
  *   0.75–0.92  the parts come home, the cut closes
- *   0.85–1.00  it turns back to where it began, and hands back to the drift
+ *   0.80–0.95  it turns back to where it began, and hands back to the drift
+ * Its camera matches the drifting one's lens (20°), and it sits underneath that
+ * one through each hand-over, so the cross-fade is between identical frames.
  * Its progress goes out as shot.inside, so the hand-overs line up.
  * `still` renders the finished, exploded frame once (reduced motion).
  */
@@ -151,7 +153,7 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     return { ...p, meshes, rest: meshes.map((m) => m.position.clone()), anchor };
   });
 
-  const camera = new THREE.PerspectiveCamera(26, 1, 0.05, 20);
+  const camera = new THREE.PerspectiveCamera(20, 1, 0.05, 20);
   const tmp = new THREE.Vector3();
   let W = 1;
   let H = 1;
@@ -200,11 +202,13 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     turn.rotation.y =
       lerp(-0.95, 0.35, inOut(smooth(0.05, 0.3, p))) +
       0.3 * smooth(0.55, 0.8, p) +
-      (Math.PI * 2 - 0.95 - 0.65) * inOut(smooth(0.85, 1, p));
+      (Math.PI * 2 - 0.95 - 0.65) * inOut(smooth(0.8, 0.95, p));
 
     const cut = inOut(smooth(0.1, 0.32, p)) * (1 - inOut(smooth(0.8, 0.94, p)));
     cutX.constant = lerp(1, 0, cut);
     cutZ.constant = lerp(1, 0, cut);
+    // Closed, the powder's edge shows through the foot ring: only while cut.
+    powder.visible = siphon.visible = cut > 0.001;
 
     const e = smooth(0.32, 0.6, p) * (1 - smooth(0.75, 0.92, p));
     for (const g of groups) {
@@ -215,14 +219,14 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
       });
     }
 
-    const dist = lerp(phone ? 2.4 : 2.05, phone ? 3.3 : 2.75, e);
+    const dist = lerp(phone ? 3.14 : 2.68, phone ? 4.32 : 3.6, e);
     const ty = lerp(0.07, 0.08, e);
     camera.position.set(0, ty + dist * 0.14, dist);
     camera.lookAt(0, ty, 0);
     (shadow.material as THREE.MeshBasicMaterial).opacity = 1 - e * 0.7;
 
     // The hand-overs: this model is only shown between them.
-    canvas.style.opacity = still ? "1" : (smooth(0.015, 0.05, p) * (1 - smooth(0.95, 0.985, p))).toFixed(3);
+    canvas.style.opacity = still || (p > 0.003 && p < 0.997) ? "1" : "0";
     intro.style.opacity = (1 - smooth(0.3, 0.4, p)).toFixed(3);
     renderer.render(scene, camera);
     layoutCallouts(p, e);

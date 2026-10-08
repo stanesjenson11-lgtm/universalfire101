@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { home, page, products, services, type Block } from "@/lib/content";
 import Rich from "@/components/ui/Rich";
-import { gsap, useGsap } from "@/lib/motion";
+import { gsap, ScrollTrigger, useGsap } from "@/lib/motion";
 import { SpecTable, Statement } from "@/components/Blocks";
 import Enquiry from "@/components/Enquiry";
 import StackingCards, { StackingCardItem } from "@/components/fancy/blocks/stacking-cards";
@@ -30,6 +30,24 @@ function Headline({ children, className = "" }: { children: string; className?: 
 }
 
 const strip = (s: string) => s.replace(/==|\[|\]\(.+?\)/g, "");
+
+/** A section too tall for the screen pins once its bottom is in view. */
+const pinStart = (el: HTMLElement) => () => (el.offsetHeight > innerHeight + 1 ? "bottom bottom" : "top top");
+
+/**
+ * Locks a one-screen section (`wide:frame`) in place for half a screen of
+ * scrolling as it arrives, so it reads as a held frame. Desktop only, where
+ * these sections are laid out to fit.
+ */
+function useLock() {
+  return useGsap<HTMLElement>(({ self }) => {
+    const mm = gsap.matchMedia();
+    mm.add("(min-width: 64rem)", () => {
+      ScrollTrigger.create({ trigger: self, pin: true, start: pinStart(self), end: "+=50%", invalidateOnRefresh: true });
+    });
+    return () => mm.revert();
+  });
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -233,14 +251,8 @@ export function Sectors() {
       scrollTrigger: {
         trigger: self,
         pin: true,
-        // Hold with the heading just under the nav and the photos on screen;
-        // on a screen too short for both, the photos win.
-        start: () => {
-          const cs = getComputedStyle(self);
-          const pt = parseFloat(cs.paddingTop);
-          const content = self.offsetHeight - pt - parseFloat(cs.paddingBottom);
-          return content + 96 <= innerHeight ? `top+=${pt - 96} top` : "bottom bottom";
-        },
+        // The section is one screen (frame): it holds as it fills it.
+        start: pinStart(self),
         end: () => `+=${dist()}`,
         scrub: 0.6,
         invalidateOnRefresh: true,
@@ -249,35 +261,36 @@ export function Sectors() {
     return () => delete self.dataset.driven;
   });
   return (
-    <section ref={scope} id="sectors" data-ground="light" className="group overflow-x-clip bg-white py-section-lg">
-      <div className="mx-auto flex max-w-[72rem] flex-wrap items-end justify-between gap-6 px-gutter">
-        <div className="max-w-[46rem]">
-          <Headline>{heading}</Headline>
-          <p className="mt-5 text-lead text-muted">
+    <section ref={scope} id="sectors" data-ground="light" className="group frame overflow-x-clip bg-white">
+      <div className="mx-auto grid w-full max-w-[72rem] items-end gap-x-12 gap-y-5 px-gutter wide:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+        <Headline>{heading}</Headline>
+        <div>
+          <p className="text-lead text-muted">
             <Rich text={intro} />
           </p>
-        </div>
-        <div className="flex gap-2 group-data-[driven]:hidden" aria-label="Scroll sectors">
-          {([-1, 1] as const).map((d) => (
-            <button
-              key={d}
-              onClick={() => nudge(d)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-paper text-h3 leading-none transition-colors duration-300 hover:bg-[#e8e8ed]"
-              aria-label={d < 0 ? "Previous sector" : "Next sector"}
-            >
-              <span aria-hidden="true">{d < 0 ? "‹" : "›"}</span>
-            </button>
-          ))}
+          <div className="mt-6 flex gap-2 group-data-[driven]:hidden" aria-label="Scroll sectors">
+            {([-1, 1] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => nudge(d)}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-paper text-h3 leading-none transition-colors duration-300 hover:bg-[#e8e8ed]"
+                aria-label={d < 0 ? "Previous sector" : "Next sector"}
+              >
+                <span aria-hidden="true">{d < 0 ? "‹" : "›"}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+      {/* The cards take the rest of the screen; the photos crop to fit. */}
       <ul
         ref={track}
-        className="mt-12 flex snap-x snap-mandatory gap-grid overflow-x-auto scroll-px-gutter px-gutter pb-4 [scrollbar-width:none] group-data-[driven]:snap-none group-data-[driven]:overflow-visible"
+        className="mt-[clamp(1.5rem,5svh,3rem)] flex max-h-[38rem] min-h-0 flex-1 snap-x snap-mandatory gap-grid overflow-x-auto scroll-px-gutter px-gutter pb-4 [scrollbar-width:none] group-data-[driven]:snap-none group-data-[driven]:overflow-visible"
       >
         {items.map((it) => (
-          <li key={it.name} className="w-[min(82vw,26rem)] shrink-0 snap-start">
-            <article className="tile overflow-hidden bg-paper">
-              <div className="relative aspect-[4/3]">
+          <li key={it.name} className="flex w-[min(82vw,26rem)] shrink-0 snap-start">
+            <article className="tile flex w-full flex-col overflow-hidden bg-paper">
+              <div className="relative min-h-0 flex-1">
                 <Image src={it.image.src} alt={it.image.alt} fill sizes="26rem" className="object-cover" />
               </div>
               <div className="p-6">
@@ -294,24 +307,26 @@ export function Sectors() {
 
 /* ------------------------------------------------------------------------ */
 
-/* A fire hose, uncoiled across the section. 1600 × 640 user units. */
+/* A fire hose, uncoiled across the section. 1600 × 400 user units: wide
+   enough that the width sets its scale on any desktop screen. */
 const HOSE =
-  "M -80 470 C 120 470 220 300 420 300 C 640 300 640 520 860 520 C 1080 520 1100 220 1320 200 C 1460 188 1560 260 1700 300";
+  "M -80 277 C 120 277 220 164 420 164 C 640 164 640 310 860 310 C 1080 310 1100 111 1320 98 C 1460 90 1560 138 1700 164";
 
 /** Hydrant equipment riding along a fire hose. */
 export function Equipment() {
   const { heading, body, items } = home.equipment;
+  const scope = useLock();
   return (
-    <section id="equipment" data-ground="dark" className="on-black relative overflow-hidden pt-section-lg pb-section">
+    <section ref={scope} id="equipment" data-ground="dark" className="on-black relative overflow-hidden pt-section-lg pb-section wide:frame">
       <div className="mx-auto max-w-[72rem] px-gutter text-center">
         <Headline>{heading}</Headline>
         <p className="mx-auto mt-5 max-w-[52ch] text-lead text-muted-dark">{body}</p>
       </div>
-      <div className="relative mt-6 h-[clamp(18rem,44vw,40rem)] text-fire-deep [&_path]:[stroke-linecap:round] [&_path]:[stroke-width:20px]">
+      <div className="relative mt-6 h-[clamp(10rem,30vw,40rem)] text-fire-deep wide:h-auto wide:min-h-0 wide:flex-1 [&_path]:[stroke-linecap:round] [&_path]:[stroke-width:20px] [&_svg]:overflow-visible">
         <MarqueeAlongSvgPath
           path={HOSE}
           pathId="uf-hose"
-          viewBox="0 0 1600 640"
+          viewBox="0 0 1600 400"
           showPath
           responsive
           baseVelocity={4}
@@ -346,12 +361,14 @@ export function Equipment() {
 export function Why() {
   const { heading, body, items } = home.why;
   const box = useRef<HTMLDivElement>(null);
+  const scope = useLock();
   return (
-    <section id="why" data-ground="light" className="bg-white px-gutter py-section-lg">
-      <div ref={box} className="mx-auto max-w-[72rem]">
+    <section ref={scope} id="why" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
+      <div ref={box} className="mx-auto w-full max-w-[72rem]">
+        {/* Desktop: one line, with room for letters to thicken without rewrapping. */}
         <VariableFontCursorProximity
           as="h2"
-          className="text-[clamp(3rem,10vw,8rem)] leading-[0.95] font-[300] tracking-[-0.035em]"
+          className="text-[clamp(3rem,10vw,8rem)] leading-[0.95] font-[300] tracking-[-0.035em] wide:text-[clamp(3rem,min(7.5vw,12svh),7rem)]"
           fromFontVariationSettings="'wght' 300"
           toFontVariationSettings="'wght' 800"
           radius={180}
@@ -360,15 +377,15 @@ export function Why() {
         >
           {heading}
         </VariableFontCursorProximity>
-        <p className="mt-8 max-w-[58ch] text-lead text-muted">
+        <p className="mt-8 max-w-[58ch] text-lead text-muted wide:mt-[clamp(1rem,3svh,2rem)]">
           <Rich text={body} />
         </p>
-        <ul className="mt-14 grid gap-grid wide:grid-cols-3">
+        <ul className="mt-14 grid gap-grid wide:mt-[clamp(1.5rem,5svh,3.5rem)] wide:grid-cols-3">
           {items.map((it) => (
-            <li key={it.title} className="tile flex flex-col bg-paper p-8">
+            <li key={it.title} className="tile flex flex-col bg-paper p-8 wide:p-[clamp(1.25rem,3.5svh,2rem)]">
               <h3 className="text-h3 font-semibold">{it.title}</h3>
               <p className="mt-3 text-muted">{it.text}</p>
-              <a href={it.href} className="more mt-6">
+              <a href={it.href} className="more mt-6 wide:mt-[clamp(1rem,2.5svh,1.5rem)]">
                 Learn more
               </a>
             </li>
@@ -400,9 +417,10 @@ export function Licence() {
 /* ------------------------------------------------------------------------ */
 
 export function Contact() {
+  const scope = useLock();
   return (
-    <section id="contact" data-ground="light" className="bg-paper px-gutter py-section-lg">
-      <div className="mx-auto max-w-[72rem]">
+    <section ref={scope} id="contact" data-ground="light" className="bg-paper px-gutter py-section-lg wide:frame">
+      <div className="mx-auto w-full max-w-[72rem]">
         <Enquiry />
       </div>
     </section>

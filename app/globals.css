@@ -34,7 +34,7 @@
   --text-h1--line-height: 1.07;
   --text-h1--letter-spacing: -0.015em;
 
-  --text-h2: clamp(2rem, 4.2vw, 3.5rem);
+  --text-h2: clamp(2rem, min(4.2vw, 7svh), 3.5rem); /* short screens too: sections fit one screen */
   --text-h2--line-height: 1.08;
   --text-h2--letter-spacing: -0.012em;
 
@@ -42,7 +42,7 @@
   --text-h3--line-height: 1.14;
   --text-h3--letter-spacing: -0.009em;
 
-  --text-lead: clamp(1.1875rem, 1.6vw, 1.5rem);
+  --text-lead: clamp(1.1875rem, min(1.6vw, 2.9svh), 1.5rem);
   --text-lead--line-height: 1.33;
   --text-lead--letter-spacing: -0.012em;
 
@@ -81,6 +81,18 @@
     --spacing-section: 2.75rem;
     --spacing-section-lg: 4.5rem;
   }
+}
+
+/* One screen: the section fits the viewport exactly, clear of the nav pill,
+   its content centred in what is left. Sections that lock in place use it. */
+@utility frame {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100svh;
+  min-height: 36rem;
+  padding-top: clamp(5.5rem, 12svh, 7rem);
+  padding-bottom: clamp(1.5rem, 5svh, 3.5rem);
 }
 
 /* Semantic z-index scale — never arbitrary values. */

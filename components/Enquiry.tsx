@@ -50,7 +50,7 @@ export default function Enquiry() {
         </p>
         <input type="hidden" name="phone" value={site.whatsapp} />
 
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 wide:mt-[clamp(1rem,3svh,2rem)] wide:gap-y-[clamp(0.75rem,2svh,1.25rem)]">
           <label className="text-small font-medium">
             Your name
             <input name="name" autoComplete="name" required className={field} />
@@ -86,17 +86,18 @@ export default function Enquiry() {
               rows={5}
               required
               placeholder="Building type, number of floors, what you have installed today…"
-              className={`${field} resize-y placeholder:text-muted`}
+              className={`${field} resize-y placeholder:text-muted wide:h-[clamp(5.5rem,16svh,9.5rem)]`}
             />
           </label>
         </div>
 
-        <button type="submit" className="btn btn-fire mt-6">
+        <button type="submit" className="btn btn-fire mt-6 wide:mt-[clamp(1rem,3svh,1.5rem)]">
           Send on WhatsApp
         </button>
       </form>
 
-      <div className="flex flex-col gap-10 wide:col-span-5 wide:col-start-8">
+      {/* Desktop: the map takes whatever height the form leaves. */}
+      <div className="flex flex-col gap-10 wide:col-span-5 wide:col-start-8 wide:gap-[clamp(1rem,4svh,2.5rem)]">
         <div className="flex flex-col gap-2 text-h3 font-semibold tabular-nums">
           <a href={`tel:${site.phone.tel}`} className="hover:text-fire">
             {site.phone.display}
@@ -129,7 +130,7 @@ export default function Enquiry() {
           title="Universal Fire Safety Equipments, Coimbatore, on Google Maps"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
-          className="tile aspect-[4/3] w-full border-0 bg-white"
+          className="tile aspect-[4/3] w-full border-0 bg-white wide:aspect-auto wide:min-h-32 wide:flex-1"
         />
       </div>
     </div>

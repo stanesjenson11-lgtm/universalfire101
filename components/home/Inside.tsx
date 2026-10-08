@@ -73,9 +73,13 @@ export default function Inside() {
             </li>
           ))}
         </ol>
-        <div ref={intro} className="pointer-events-none relative z-[var(--z-content)] px-gutter pt-[clamp(6rem,14vh,9rem)] text-center">
+        {/* Desktop: beside the model, never over it (it stands centred, about a fifth of the screen height wide). */}
+        <div
+          ref={intro}
+          className="pointer-events-none relative z-[var(--z-content)] px-gutter pt-[clamp(6rem,14vh,9rem)] text-center wide:absolute wide:top-[55%] wide:left-0 wide:w-[min(34rem,calc(50vw-22svh))] wide:-translate-y-1/2 wide:pt-0 wide:text-left"
+        >
           <h2 className="text-h2 font-semibold">{heading}</h2>
-          <p className="mx-auto mt-4 max-w-[40ch] text-lead text-muted-dark">{body}</p>
+          <p className="mx-auto mt-4 max-w-[40ch] text-lead text-muted-dark wide:mx-0">{body}</p>
         </div>
       </div>
       {/* The same parts as plain text: phones, no-JS, no WebGL, screen readers. */}
