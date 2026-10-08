@@ -68,9 +68,8 @@ export default function Nav() {
         <div ref={bar} className="uf-nav pointer-events-auto flex items-center justify-between gap-6">
           <a href="#top" className="uf-logo shrink-0" aria-label={`${site.name} — back to top`}>
             <Emblem variant="mark" />
-            <span className="flex flex-col leading-none" aria-hidden="true">
-              <span className="text-[1rem] font-bold tracking-[-0.015em]">Universal Fire</span>
-              <span className="mt-1 text-[0.6875rem] opacity-75">Safety Equipments</span>
+            <span className="uf-wordmark" aria-hidden="true">
+              <span className="font-light">Universal</span> <span className="font-bold">Fire</span>
             </span>
           </a>
 
