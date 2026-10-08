@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useInView } from "motion/react";
 import { home, page, products, services, type Block } from "@/lib/content";
 import Rich from "@/components/ui/Rich";
-import { gsap, prefersReduced, ScrollTrigger, useGsap } from "@/lib/motion";
+import { prefersReduced } from "@/lib/motion";
 import { SpecTable, Statement } from "@/components/Blocks";
 import Enquiry, { MapFrame } from "@/components/Enquiry";
 import StackingCards, { StackingCardItem } from "@/components/fancy/blocks/stacking-cards";
@@ -31,24 +31,6 @@ function Headline({ children, className = "" }: { children: string; className?: 
 }
 
 const strip = (s: string) => s.replace(/==|\[|\]\(.+?\)/g, "");
-
-/** A section too tall for the screen pins once its bottom is in view. */
-const pinStart = (el: HTMLElement) => () => (el.offsetHeight > innerHeight + 1 ? "bottom bottom" : "top top");
-
-/**
- * Locks a one-screen section (`wide:frame`) in place for half a screen of
- * scrolling as it arrives, so it reads as a held frame. Desktop only, where
- * these sections are laid out to fit.
- */
-function useLock() {
-  return useGsap<HTMLElement>(({ self }) => {
-    const mm = gsap.matchMedia();
-    mm.add("(min-width: 64rem)", () => {
-      ScrollTrigger.create({ trigger: self, pin: true, anticipatePin: 1, start: pinStart(self), end: "+=50%", invalidateOnRefresh: true });
-    });
-    return () => mm.revert();
-  });
-}
 
 /* ------------------------------------------------------------------------ */
 
@@ -137,7 +119,7 @@ export function Products() {
 
 /**
  * Seven extinguisher types behind an Apple segmented control. Desktop: one
- * screen that locks — the heading on one line, the photo beside the table.
+ * screen — the heading on one line, the photo beside the table.
  *
  * The types advance on their own every 10 seconds: a countdown line under the
  * selected tab runs out and the next one shows. It holds (and picks up where it
@@ -151,7 +133,7 @@ export function Specs() {
   const [at, setAt] = useState(0);
   const [near, setNear] = useState(false);
   const s = specs[at];
-  const scope = useLock();
+  const scope = useRef<HTMLElement>(null);
   const tabs = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
   const held = useRef({ pointer: false, keys: false });
@@ -162,9 +144,8 @@ export function Specs() {
     return () => io.disconnect();
   }, [scope]);
 
-  // The countdown, in script rather than a CSS animation: a locked section is
-  // re-inserted on every ScrollTrigger refresh, which restarts CSS animations.
-  // Time only adds up while nothing holds it, so it resumes where it paused;
+  // The countdown, in script rather than a CSS animation, so it can hold and
+  // resume where it paused. Time only adds up while nothing holds it, so it resumes where it paused;
   // a new tab, or coming back on screen, starts a fresh 10 seconds.
   useEffect(() => {
     if (!near || prefersReduced()) return;
@@ -256,13 +237,12 @@ export function Specs() {
 
 /**
  * The four services as an Apple bento: one large tile, three smaller.
- * Desktop: one screen that locks — the large tile down the left, the three
+ * Desktop: one screen — the large tile down the left, the three
  * as image-beside-words tiles stacked on the right, all filling what is left.
  */
 export function Services() {
-  const scope = useLock();
   return (
-    <section ref={scope} id="services" data-ground="dark" className="on-black px-gutter py-section-lg wide:frame">
+    <section id="services" data-ground="dark" className="on-black px-gutter py-section-lg wide:frame">
       <div className="mx-auto flex min-h-0 w-full max-w-[72rem] flex-1 flex-col">
         <Headline className="max-w-[18ch]">Looked after, all year</Headline>
         <p className="mt-5 max-w-[52ch] text-lead text-muted-dark wide:mt-[clamp(0.5rem,1.5svh,1.25rem)]">{strip(page("services")!.lede)}</p>
@@ -306,36 +286,15 @@ export function Services() {
 /* ------------------------------------------------------------------------ */
 
 /**
- * By sector, the agents that suit it. The section holds still while scrolling
- * down runs the photos across from first to last. Without motion it is a
- * native scroll-snap carousel with its own buttons.
+ * By sector, the agents that suit it: a native scroll-snap row of photos with
+ * its own buttons. Scrolling the page never moves it sideways.
  */
 export function Sectors() {
   const { heading, intro, items } = home.sectors;
   const track = useRef<HTMLUListElement>(null);
   const nudge = (dir: 1 | -1) => track.current?.scrollBy({ left: dir * track.current.clientWidth * 0.8, behavior: "smooth" });
-  const scope = useGsap<HTMLElement>(({ self }) => {
-    const ul = track.current!;
-    const dist = () => ul.scrollWidth - ul.clientWidth;
-    self.dataset.driven = "";
-    gsap.to(ul, {
-      x: () => -dist(),
-      ease: "none",
-      scrollTrigger: {
-        trigger: self,
-        pin: true,
-        anticipatePin: 1,
-        // The section is one screen (frame): it holds as it fills it.
-        start: pinStart(self),
-        end: () => `+=${dist()}`,
-        scrub: true, // on the scroll, not eased behind it: the same at any speed
-        invalidateOnRefresh: true,
-      },
-    });
-    return () => delete self.dataset.driven;
-  });
   return (
-    <section ref={scope} id="sectors" data-ground="light" className="group frame overflow-x-clip bg-white">
+    <section id="sectors" data-ground="light" className="group frame overflow-x-clip bg-white">
       <div className="mx-auto w-full max-w-[72rem] px-gutter">
         <Headline>{heading}</Headline>
         <div className="mt-4 max-w-[44rem]">
@@ -389,13 +348,12 @@ const HOSE =
 /** Hydrant equipment riding along a fire hose. */
 export function Equipment() {
   const { heading, body, items } = home.equipment;
-  const scope = useLock();
   // The hose's pictures only travel while it is near the screen: the marquee
   // otherwise updates a dozen positions every frame, all the way down the page.
   const hose = useRef<HTMLDivElement>(null);
   const near = useInView(hose, { margin: "200px 0px" });
   return (
-    <section ref={scope} id="equipment" data-ground="dark" className="frame on-black relative overflow-hidden">
+    <section id="equipment" data-ground="dark" className="frame on-black relative overflow-hidden">
       <div className="mx-auto max-w-[72rem] px-gutter text-center">
         <Headline>{heading}</Headline>
         <p className="mx-auto mt-5 max-w-[52ch] text-lead text-muted-dark">{body}</p>
@@ -439,9 +397,8 @@ export function Equipment() {
 export function Why() {
   const { heading, body, items } = home.why;
   const box = useRef<HTMLDivElement>(null);
-  const scope = useLock();
   return (
-    <section ref={scope} id="why" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
+    <section id="why" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
       <div ref={box} className="mx-auto w-full max-w-[72rem]">
         {/* Desktop: one line, with room for letters to thicken without rewrapping. */}
         <VariableFontCursorProximity
@@ -500,9 +457,8 @@ export function Licence() {
  * The offices are in the footer just below.
  */
 export function Contact() {
-  const scope = useLock();
   return (
-    <section ref={scope} id="contact" data-ground="light" className="relative overflow-hidden bg-paper px-gutter py-section-lg wide:frame">
+    <section id="contact" data-ground="light" className="relative overflow-hidden bg-paper px-gutter py-section-lg wide:frame">
       <MapFrame className="absolute inset-0" />
       <div className="relative mx-auto w-full max-w-[42rem]">
         <Enquiry />

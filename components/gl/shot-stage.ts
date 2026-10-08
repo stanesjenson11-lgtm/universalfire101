@@ -185,7 +185,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
         { sel: "footer", side: 0, fx: 0.92, y: 0.45, h: 0.1, yaw: -0.5, tilt: 0, o: 1, onPage: true, exact: true, move: { trail: true } },
       ];
   const POSES = (!roomy ? PHONE : [
-    // Off the right edge while you read the profile (the portrait fills the right), then back in for the exploded view.
+    // The profile: it never comes here (see hidden) — it leaves with the fire section.
     { sel: "#about", side: 0, fx: 1.3, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 0 },
     // The exploded view's opening frame: centred, 69% of the screen, facing -0.95.
     { sel: "#inside", side: 0, fx: 0.5, y: 0.572, h: 0.69, yaw: -0.95, tilt: 0, pitch: 0.14, o: 1, exact: true, move: { rocket: true } },
@@ -201,7 +201,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     { sel: "#contact", side: -1, y: 0.62, h: 0.24, yaw: -0.5, tilt: 0.1, o: 1 },
     { sel: "footer", side: 1, y: 0.42, h: 0.24, yaw: -0.5, tilt: 0, o: 1, fx: 0.9, onPage: true, exact: true, move: { trail: true } }, // upright in the night sky, right of the offices, under the moon
   ] as Pose[]).map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
-  const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0, ins: 0 };
+  const pose = { c: 0, x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0, ins: 0 };
   let lastY = window.scrollY;
   let moved = 0; // px scrolled since the last frame
   const companionPose = () => {
@@ -213,6 +213,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const mid = roomy ? H * 0.5 : 0;
     let c = 0;
     POSES.forEach((p, i) => p.el && p.el.getBoundingClientRect().top <= mid && (c = i));
+    pose.c = c;
     const cur = POSES[c];
     const next = POSES[Math.min(c + 1, POSES.length - 1)];
     // Holds its pose through a section (however long — pinned ones are), and
@@ -239,13 +240,14 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     pose.pitch = lerp(cur.pitch ?? 0, next.pitch ?? 0, t);
     // How far into the hand-over pose: it takes on the exploded view's light.
     pose.ins = c === 0 ? t : c === 1 ? 1 - t : 0;
-    // While the exploded view holds the screen, it is the exploded model. That
-    // one is already showing underneath, identical, so this one just fades.
-    // (Only once the exploded view is up — it publishes insideOpen — so this
-    // one never fades into an empty stage.)
-    const merged = c === 1 && shot.insideOpen ? smooth(0.006, 0.05, shot.inside) * (1 - smooth(0.95, 0.99, shot.inside)) : 0;
+    // Never over the profile: hidden while it is the current section (the
+    // extinguisher stays with the fire section, see apply). Through the
+    // exploded view, that view's own model is the one on screen, rising with
+    // its section; this one only comes back for the hand-back at the end.
+    // (If the exploded view never came up — no insideOpen — this one stands in.)
+    const hidden = c === 0 ? 1 : c === 1 && shot.insideOpen ? 1 - smooth(0.95, 0.99, shot.inside) : 0;
     // Fading out it holds on until it is nearly off the screen.
-    pose.o = lerp(cur.o, next.o, next.o < cur.o ? t * t * t : t) * (1 - merged);
+    pose.o = lerp(cur.o, next.o, next.o < cur.o ? t * t * t : t) * (1 - hidden);
     moved = Math.abs(window.scrollY - lastY);
     lastY = window.scrollY;
     pose.tilt = lerp(cur.tilt, next.tilt, t);
@@ -368,10 +370,14 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const lean = r < 0.1 ? -Math.sin((r / 0.1) * Math.PI) * 0.08 : 0;
     rig.rotation.z = -Math.PI * 2 * e + lean;
 
-    // Into companion mode as the fire section leaves.
+    // Into companion mode as the fire section leaves — but not while the
+    // profile is the current section: then it stays where it landed and
+    // scrolls away with the fire section, never crossing the profile.
     let o = 1;
-    if (after > 0) {
-      companionPose();
+    let away = 0; // how far it has gone over to the companion pose
+    if (after > 0) companionPose();
+    if (after > 0 && pose.c !== 0) {
+      away = after;
       const blend = inOut(after);
       const target = world(pose.x, pose.y);
       rig.position.lerp(target, blend);
@@ -408,14 +414,14 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const grounded = 1 - Math.sin(Math.PI * clamp01(r * 1.1));
     shadow.position.set(rig.position.x, base.y + 0.002, 0);
     shadow.scale.setScalar(scale);
-    (shadow.material as THREE.MeshBasicMaterial).opacity = grounded * (1 - after);
+    (shadow.material as THREE.MeshBasicMaterial).opacity = grounded * (1 - away);
 
     // Fire light: comes up as the fire section rises, dies with the fire.
     const firePresence = clamp01((H - f.top) / H);
     fireLight.position.set(rig.position.x - h * 1.2, base.y + h * 0.2, h * 0.8);
     fireLight.intensity = 6 * firePresence * fireLeft(s) * (0.85 + 0.15 * Math.sin(time * 9.7) * Math.sin(time * 6.1));
     rim.intensity = 1.1 * (1 - firePresence * 0.7);
-    const ins = after > 0 ? pose.ins * inOut(after) : 0;
+    const ins = away > 0 ? pose.ins * inOut(away) : 0;
     key.intensity = lerp(1.6, 1.4, ins);
     key.position.lerpVectors(keyOut, keyIn, ins);
     rim.position.lerpVectors(rimOut, rimIn, ins);
@@ -439,7 +445,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const ny = (-v.y * 0.5 + 0.5) * H;
     shot.nozzle[0] = (nx - f.left) / Math.max(1, f.height);
     shot.nozzle[1] = (ny - f.top) / Math.max(1, f.height);
-    if (companion) foam(time, nx, ny, after > 0.95 ? pose.rocket : 0, after > 0.95 ? pose.trail : 0);
+    if (companion) foam(time, nx, ny, away > 0.95 ? pose.rocket : 0, away > 0.95 ? pose.trail : 0);
 
     renderer.render(scene, camera);
   };

@@ -43,14 +43,15 @@ type Els = {
 /**
  * The exploded view of the real, scanned extinguisher — scrubbed by scroll,
  * one number p, so scrolling back reverses it exactly:
- *   0.00–0.05  the drifting extinguisher (shot-stage) arrives and merges in
+ * Shown from the start, rising into place with its section (the drifting
+ * extinguisher stays out of the profile above it).
  *   0.05–0.30  it turns into a three-quarter view
  *   0.10–0.32  a quarter of the cylinder is cut away: wall, powder, siphon tube
  *   0.32–0.60  the parts lift off along their own axes, callouts draw in
  *   0.75–0.92  the parts come home, the cut closes
  *   0.80–0.95  it turns back to where it began, and hands back to the drift
  * Its camera matches the drifting one's lens (20°), and it sits underneath that
- * one through each hand-over, so the cross-fade is between identical frames.
+ * one through the hand-back, so the cross-fade is between identical frames.
  * The progress is the stage's own pin (Inside.tsx), read as shot.inside, so
  * the hand-overs line up and this module, arriving late, makes no pins.
  * `still` renders the finished, exploded frame once (reduced motion).
@@ -276,8 +277,9 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     place(e);
     (shadow.material as THREE.MeshBasicMaterial).opacity = 1 - e * 0.7;
 
-    // The hand-overs: this model is only shown between them.
-    canvas.style.opacity = still || (p > 0.003 && p < 0.997) ? "1" : "0";
+    // Shown from the start, rising with its section (the drifting extinguisher
+    // stays out of the profile above); handed back to the drift at the end.
+    canvas.style.opacity = still || p < 0.997 ? "1" : "0";
     intro.style.opacity = (1 - smooth(0.3, 0.4, p)).toFixed(3);
     renderer.render(scene, camera);
     layoutCallouts(p, e);
