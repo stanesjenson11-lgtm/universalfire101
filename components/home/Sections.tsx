@@ -6,7 +6,7 @@ import { home, page, products, services, type Block } from "@/lib/content";
 import Rich from "@/components/ui/Rich";
 import { gsap, prefersReduced, ScrollTrigger, useGsap } from "@/lib/motion";
 import { SpecTable, Statement } from "@/components/Blocks";
-import Enquiry from "@/components/Enquiry";
+import Enquiry, { MapFrame } from "@/components/Enquiry";
 import StackingCards, { StackingCardItem } from "@/components/fancy/blocks/stacking-cards";
 import MarqueeAlongSvgPath from "@/components/fancy/blocks/marquee-along-svg-path";
 import VariableFontCursorProximity from "@/components/fancy/text/variable-font-cursor-proximity";
@@ -69,18 +69,21 @@ export function About() {
   return (
     <>
       <section ref={scope} id="about" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
-        <div className="mx-auto grid w-full max-w-[72rem] gap-x-10 gap-y-8 wide:grid-cols-12 wide:gap-y-[clamp(0.75rem,2.5svh,1.5rem)]">
+        {/* Phones and tablets: Kickstart's About — the portrait floated right,
+            the justified copy running beside it and on underneath, airy
+            leading. Desktop: the grid (a clearfix ends the float below it). */}
+        <div className="mx-auto w-full max-w-[72rem] after:block after:clear-both after:content-[''] wide:grid wide:grid-cols-12 wide:gap-x-10 wide:gap-y-[clamp(0.75rem,2.5svh,1.5rem)] wide:after:hidden">
           <Headline className="wide:col-span-9">{prose[0].heading!}</Headline>
 
           {/* Beside the copy and as tall as it: the photo's top level with the
               first line, the name level with the last. */}
-          <figure className="flex flex-col wide:col-span-3 wide:col-start-10 wide:row-start-2">
-            <div className="card relative aspect-[4/5] max-w-[22rem] overflow-hidden bg-paper wide:aspect-auto wide:min-h-0 wide:max-w-none wide:flex-1">
+          <figure className="float-right mt-6 mb-3 ml-grid flex w-[42%] max-w-[17rem] flex-col wide:float-none wide:col-span-3 wide:col-start-10 wide:row-start-2 wide:m-0 wide:w-auto wide:max-w-none">
+            <div className="card relative aspect-[4/5] overflow-hidden bg-paper wide:aspect-auto wide:min-h-0 wide:flex-1">
               <Image src={person.image.src} alt={person.image.alt} fill sizes="(min-width: 1024px) 17rem, 22rem" className="object-cover object-[50%_25%]" />
             </div>
-            <figcaption className="mt-4">
-              <p className="text-h3 font-semibold">{person.name}</p>
-              <p className="mt-1 text-muted">{person.role}</p>
+            <figcaption className="mt-2.5 wide:mt-4">
+              <p className="text-[1.0625rem] leading-tight font-semibold wide:text-h3">{person.name}</p>
+              <p className="mt-0.5 text-small text-muted wide:mt-1 wide:text-body">{person.role}</p>
             </figcaption>
           </figure>
 
@@ -91,7 +94,7 @@ export function About() {
               headings run in to their first paragraph, so none can be left
               alone at the foot of a column. 16px on desktop keeps the
               justified measure near 55 characters. */}
-          <div className="text-justify text-muted hyphens-auto [orphans:1] [widows:1] wide:col-span-9 wide:columns-2 wide:gap-10 wide:text-[clamp(0.875rem,2.3svh,1rem)] [&>*:last-child]:mb-0">
+          <div className="mt-6 text-justify text-muted hyphens-auto [orphans:1] [widows:1] max-wide:leading-[1.85] wide:col-span-9 wide:mt-0 wide:columns-2 wide:gap-10 wide:text-[clamp(0.875rem,2.3svh,1rem)] [&>*:last-child]:mb-0">
             {prose[0].body.map((p) => (
               <p key={p} className={para}>
                 <Rich text={p} />
@@ -127,7 +130,9 @@ export function About() {
 export function Products() {
   const intro = home.intro;
   return (
-    <section id="products" data-ground="light" className="bg-paper px-gutter pt-section-lg">
+    // pb: each stacked card sits up to 9.5rem below its own box (topPosition);
+    // without the room it would hang over the next section's heading.
+    <section id="products" data-ground="light" className="bg-paper px-gutter pt-section-lg pb-[10rem]">
       <div className="mx-auto max-w-[72rem] text-center">
         <Headline>{intro.heading}</Headline>
         <p className="mx-auto mt-5 max-w-[60ch] text-lead text-muted">
@@ -301,10 +306,10 @@ export function Services() {
             <li key={p.slug} className={i === 0 ? "wide:row-span-3" : "wide:min-h-0"}>
               <a
                 href={`#${p.slug}`}
-                className={`tile group relative flex h-full min-h-[22rem] flex-col overflow-hidden bg-graphite ${i === 0 ? "" : "wide:min-h-0 wide:flex-row"}`}
+                className={`tile group relative flex h-full overflow-hidden bg-graphite ${i === 0 ? "min-h-[22rem] flex-col" : "min-h-[8.5rem] flex-row wide:min-h-0"}`}
               >
                 <div
-                  className={`relative overflow-hidden ${i === 0 ? "aspect-[16/10] wide:aspect-auto wide:min-h-0 wide:flex-1" : "aspect-[16/9] wide:aspect-auto wide:w-[40%] wide:shrink-0"}`}
+                  className={`relative overflow-hidden ${i === 0 ? "aspect-[16/10] wide:aspect-auto wide:min-h-0 wide:flex-1" : "w-[40%] shrink-0"}`}
                 >
                   <Image
                     src={p.image.src}
@@ -315,11 +320,11 @@ export function Services() {
                   />
                 </div>
                 <div
-                  className={`flex flex-col gap-3 p-[clamp(1.25rem,2.5vw,2rem)] wide:gap-[clamp(0.25rem,1svh,0.75rem)] wide:p-[clamp(1rem,2.6svh,1.75rem)] ${i === 0 ? "" : "flex-1 wide:min-w-0"}`}
+                  className={`flex flex-col p-[clamp(1rem,2.5vw,2rem)] wide:gap-[clamp(0.25rem,1svh,0.75rem)] wide:p-[clamp(1rem,2.6svh,1.75rem)] ${i === 0 ? "gap-3" : "min-w-0 flex-1 gap-1.5"}`}
                 >
                   <h3 className={i === 0 ? "text-h2 font-semibold" : "text-h3 font-semibold"}>{p.title}</h3>
-                  {/* Small tiles, desktop: a two-line teaser (one on short screens); the sheet has the rest. */}
-                  <p className={`text-muted-dark ${i === 0 ? "" : "wide:line-clamp-2 wide:text-small [@media(max-height:720px)]:wide:line-clamp-1"}`}>
+                  {/* Small tiles: a two-line teaser (one on short desktop screens); the sheet has the rest. */}
+                  <p className={`text-muted-dark ${i === 0 ? "" : "line-clamp-2 text-small [@media(max-height:720px)]:wide:line-clamp-1"}`}>
                     {strip(p.lede)}
                   </p>
                   <span className="more mt-auto">Learn more</span>
@@ -420,12 +425,13 @@ export function Equipment() {
   const { heading, body, items } = home.equipment;
   const scope = useLock();
   return (
-    <section ref={scope} id="equipment" data-ground="dark" className="on-black relative overflow-hidden pt-section-lg pb-section wide:frame">
+    <section ref={scope} id="equipment" data-ground="dark" className="frame on-black relative overflow-hidden">
       <div className="mx-auto max-w-[72rem] px-gutter text-center">
         <Headline>{heading}</Headline>
         <p className="mx-auto mt-5 max-w-[52ch] text-lead text-muted-dark">{body}</p>
       </div>
-      <div className="relative mt-6 h-[clamp(10rem,30vw,40rem)] text-fire-deep wide:h-auto wide:min-h-0 wide:flex-1 [&_path]:[stroke-linecap:round] [&_path]:[stroke-width:20px] [&_svg]:overflow-visible">
+      {/* Phones: the hose three screens wide, centred, so its pictures are big enough to read. */}
+      <div className="relative mt-6 min-h-0 flex-1 text-fire-deep max-[760px]:-ml-[100vw] max-[760px]:w-[300vw] [&_path]:[stroke-linecap:round] [&_path]:[stroke-width:20px] [&_svg]:overflow-visible">
         <MarqueeAlongSvgPath
           path={HOSE}
           pathId="uf-hose"
@@ -518,11 +524,17 @@ export function Licence() {
 
 /* ------------------------------------------------------------------------ */
 
+/**
+ * The enquiry on a liquid-glass card, Kickstart's proportions (one 42rem
+ * column), over the map as a full-bleed plate — grey until someone uses it.
+ * The offices are in the footer just below.
+ */
 export function Contact() {
   const scope = useLock();
   return (
-    <section ref={scope} id="contact" data-ground="light" className="bg-paper px-gutter py-section-lg wide:frame">
-      <div className="mx-auto w-full max-w-[72rem]">
+    <section ref={scope} id="contact" data-ground="light" className="relative overflow-hidden bg-paper px-gutter py-section-lg wide:frame">
+      <MapFrame className="absolute inset-0" />
+      <div className="relative mx-auto w-full max-w-[42rem]">
         <Enquiry />
       </div>
     </section>

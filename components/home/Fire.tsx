@@ -12,11 +12,12 @@ export default function Fire() {
   return (
     <section id="fire" data-ground="light" className="fire-stage relative h-svh min-h-[36rem] overflow-hidden bg-white text-ink">
       <FireFoamCanvas />
-      {/* Where the extinguisher lands, hose toward the flames. */}
+      {/* Where the extinguisher lands, hose toward the flames: smaller on narrow
+          screens, where the words come close and the raised hose would cross them. */}
       <div
         data-ext="land"
         aria-hidden="true"
-        className="absolute right-[7vw] bottom-[5svh] h-[44svh] w-[16vw] max-[620px]:right-[6vw] max-[620px]:h-[26svh] max-[620px]:w-[22vw]"
+        className="absolute right-[7vw] bottom-[5svh] h-[32svh] w-[16vw] max-[1279px]:h-[24svh] max-[1023px]:h-[22svh] max-[620px]:right-[5vw] max-[620px]:bottom-[2svh] max-[620px]:h-[16svh] max-[620px]:w-[16vw]"
       />
       <div className="relative z-[var(--z-content)] mx-auto flex h-full max-w-[58rem] flex-col items-center justify-center px-gutter text-center max-[620px]:justify-start max-[620px]:pt-[18svh]">
         <h2 className="text-h1 font-semibold">{home.fire.heading}</h2>

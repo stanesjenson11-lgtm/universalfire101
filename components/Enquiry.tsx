@@ -32,7 +32,7 @@ const field =
  * pointer leaves), or while Ctrl is held. While the map has it, the page holds
  * still, so the map and the smooth scroll never fight over the wheel.
  */
-function MapFrame({ className }: { className: string }) {
+export function MapFrame({ className }: { className: string }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const cover = useRef<HTMLButtonElement>(null);
   const [live, setLive] = useState(false);
@@ -72,8 +72,9 @@ function MapFrame({ className }: { className: string }) {
   }, [live]);
 
   return (
+    // The caller positions it. Grey (a quiet plate) until someone uses it.
     <div
-      className={`group/map relative overflow-hidden ${className}`}
+      className={`group/map overflow-hidden ${className}`}
       onMouseLeave={() => {
         setLive(false);
         setCtrl(false);
@@ -87,7 +88,7 @@ function MapFrame({ className }: { className: string }) {
         title="Universal Fire Safety Equipments, Coimbatore, on Google Maps"
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
-        className="absolute inset-0 h-full w-full border-0"
+        className={`absolute inset-0 h-full w-full border-0 transition-[filter] duration-500 ${live ? "" : "[filter:grayscale(1)_contrast(0.9)_brightness(1.06)]"}`}
       />
       {!live && !ctrl && (
         <button
@@ -97,7 +98,7 @@ function MapFrame({ className }: { className: string }) {
             setLive(true);
             frame.current?.focus();
           }}
-          className="group/cover absolute inset-0 flex cursor-pointer items-center justify-center p-4"
+          className="group/cover absolute inset-0 flex cursor-pointer items-end justify-center p-4 pb-12"
         >
           <span className="rounded-full bg-ink/80 px-4 py-2 text-small text-white opacity-0 transition-opacity duration-300 group-hover/map:opacity-100 group-focus-visible/cover:opacity-100 [@media(hover:none)]:opacity-100">
             <span className="[@media(hover:none)]:hidden">Click to use the map, or hold Ctrl and scroll to zoom</span>
@@ -119,97 +120,76 @@ export default function Enquiry() {
   };
 
   return (
-    <div className="grid gap-x-grid gap-y-14 wide:grid-cols-12">
-      <form
-        action="https://api.whatsapp.com/send"
-        method="get"
-        target="_blank"
-        onSubmit={submit}
-        className="wide:col-span-6"
-      >
-        <h2 className="text-h2 font-semibold">Send an enquiry</h2>
-        <p className="mt-3 max-w-[46ch] text-lead text-muted">
-          It opens WhatsApp with your message ready to send to {site.phone.display}.
-        </p>
-        <input type="hidden" name="phone" value={site.whatsapp} />
+    <form
+      action="https://api.whatsapp.com/send"
+      method="get"
+      target="_blank"
+      onSubmit={submit}
+      className="tile uf-glass p-6 sm:p-8 wide:p-[clamp(1.25rem,3.5svh,2rem)]"
+    >
+      <h2 className="text-center text-h2 font-semibold">Send an enquiry</h2>
+      <p className="mx-auto mt-2 max-w-[40ch] text-center text-muted">
+        It opens WhatsApp with your message ready to send to {site.phone.display}.
+      </p>
+      <input type="hidden" name="phone" value={site.whatsapp} />
 
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 wide:mt-[clamp(1rem,3svh,2rem)] wide:gap-y-[clamp(0.75rem,2svh,1.25rem)]">
-          <label className="text-small font-medium">
-            Your name
-            <input name="name" autoComplete="name" required className={field} />
-          </label>
-          <label className="text-small font-medium">
-            Phone
-            <input name="tel" type="tel" autoComplete="tel" inputMode="tel" className={field} />
-          </label>
-          <label className="text-small font-medium">
-            Site location
-            <select name="city" className={field} defaultValue="Coimbatore">
-              <option>Coimbatore</option>
-              <option>Chennai</option>
-              <option>Elsewhere in Tamil Nadu</option>
-            </select>
-          </label>
-          <label className="text-small font-medium">
-            What do you need?
-            <select name="need" className={field} defaultValue="">
-              <option value="" disabled>
-                Choose one
-              </option>
-              {needs.map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
-          </label>
-          <label className="text-small font-medium sm:col-span-2" htmlFor={`${id}-text`}>
-            Message
-            <textarea
-              id={`${id}-text`}
-              name="text"
-              rows={5}
-              required
-              placeholder="Building type, number of floors, what you have installed today…"
-              className={`${field} resize-y placeholder:text-muted wide:h-[clamp(5.5rem,16svh,9.5rem)]`}
-            />
-          </label>
-        </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 wide:mt-[clamp(0.75rem,2.5svh,1.5rem)] wide:gap-y-[clamp(0.6rem,1.6svh,1rem)]">
+        <label className="text-small font-medium">
+          Your name
+          <input name="name" autoComplete="name" required className={field} />
+        </label>
+        <label className="text-small font-medium">
+          Phone
+          <input name="tel" type="tel" autoComplete="tel" inputMode="tel" className={field} />
+        </label>
+        <label className="text-small font-medium">
+          Site location
+          <select name="city" className={field} defaultValue="Coimbatore">
+            <option>Coimbatore</option>
+            <option>Chennai</option>
+            <option>Elsewhere in Tamil Nadu</option>
+          </select>
+        </label>
+        <label className="text-small font-medium">
+          What do you need?
+          <select name="need" className={field} defaultValue="">
+            <option value="" disabled>
+              Choose one
+            </option>
+            {needs.map((n) => (
+              <option key={n}>{n}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-small font-medium sm:col-span-2" htmlFor={`${id}-text`}>
+          Message
+          <textarea
+            id={`${id}-text`}
+            name="text"
+            rows={4}
+            required
+            placeholder="Building type, number of floors, what you have installed today…"
+            className={`${field} resize-y placeholder:text-muted wide:h-[clamp(4.5rem,13svh,8rem)]`}
+          />
+        </label>
+      </div>
 
-        <button type="submit" className="btn btn-fire mt-6 wide:mt-[clamp(1rem,3svh,1.5rem)]">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 wide:mt-[clamp(0.75rem,2.5svh,1.5rem)]">
+        <button type="submit" className="btn btn-fire">
           Send on WhatsApp
         </button>
-      </form>
-
-      {/* Desktop: the map takes whatever height the form leaves. */}
-      <div className="flex flex-col gap-10 wide:col-span-5 wide:col-start-8 wide:gap-[clamp(1rem,4svh,2.5rem)]">
-        <div className="flex flex-col gap-2 text-h3 font-semibold tabular-nums">
+        <p className="flex flex-wrap gap-x-5 gap-y-1 text-small font-medium tabular-nums">
           <a href={`tel:${site.phone.tel}`} className="hover:text-fire">
             {site.phone.display}
           </a>
           <a href={`tel:${site.phone2.tel}`} className="hover:text-fire">
             {site.phone2.display}
           </a>
-          <a href={`mailto:${site.email}`} className="mt-1 break-all text-body font-normal text-fire hover:underline">
+          <a href={`mailto:${site.email}`} className="break-all text-fire hover:underline">
             {site.email}
           </a>
-        </div>
-
-        <div className="grid gap-8 sm:grid-cols-2">
-          {site.offices.map((o) => (
-            <address key={o.city} className="not-italic">
-              <h3 className="text-h3 font-semibold">{o.city}</h3>
-              <p className="mt-2 text-muted">
-                {o.lines.map((l) => (
-                  <span key={l} className="block">
-                    {l}
-                  </span>
-                ))}
-              </p>
-            </address>
-          ))}
-        </div>
-
-        <MapFrame className="tile aspect-[4/3] w-full bg-white wide:aspect-auto wide:min-h-32 wide:flex-1" />
+        </p>
       </div>
-    </div>
+    </form>
   );
 }

@@ -140,16 +140,37 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
    *    on a jet of foam), a trail of foam residue, or both; only while you
    *    are actually scrolling, and as much foam per pixel at any speed.
    *  - It ends standing upright in the footer's 24/7 band.
-   * Only where the margins are wide enough to hold it.
+   * Desktop parks it in the margins. Tablets and phones have none: there it
+   * only makes the moves — off to the side after the fire, a rocket in to
+   * merge with the exploded view, a rocket out after it, and up into the 24/7
+   * band — never parking over the text.
+   * The hand-over pose is measured by the exploded view itself
+   * (shot.insideOpen), so the two line up at any size.
    */
-  const companion = !still && window.matchMedia("(min-width: 1280px)").matches;
+  const roomy = window.matchMedia("(min-width: 1280px)").matches;
+  const portrait = window.matchMedia("(max-width: 760px)").matches;
+  const narrow = !roomy; // phones, tablets, small laptops: the words reach the extinguisher
+  const companion = !still;
   type Pose = {
     sel: string; side: number; y: number; h: number; yaw: number; tilt: number; o: number;
     fx?: number; onPage?: boolean; exact?: boolean; pitch?: number; el?: HTMLElement | null;
     /** How it travels into this pose. */
     move?: { rocket?: boolean; trail?: boolean };
   };
-  const POSES = ([
+  // Same order for both (index 0 about, 1 the hand-over, 2 products).
+  const PHONE: Pose[] = [
+    { sel: "#about", side: 0, fx: 1.3, y: 0.82, h: 0.1, yaw: 0.7, tilt: -0.3, o: 0 }, // off right while you read
+    // The exploded view's opening frame (y, h and pitch measured, below).
+    { sel: "#inside", side: 0, fx: 0.5, y: 0.6, h: 0.5, yaw: -0.95, tilt: 0, pitch: 0.12, o: 1, exact: true, move: { rocket: true } },
+    { sel: "#products", side: 0, fx: 1.25, y: 1.35, h: 0.1, yaw: -0.5, tilt: 0, o: 0, move: { rocket: true, trail: true } },
+    // Up into the 24/7 band, above the call buttons (they sit bottom right).
+    // Not on phones: the band has no room for it there, so its last move is
+    // the rocket out after the exploded view.
+    ...(portrait
+      ? []
+      : [{ sel: "footer", side: 0, fx: 0.88, y: 0.06, h: 0.1, yaw: -0.5, tilt: 0, o: 1, onPage: true, exact: true, move: { trail: true } }]),
+  ];
+  const POSES = (!roomy ? PHONE : [
     { sel: "#about", side: 1, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 1 },
     // The exploded view's opening frame: centred, 69% of the screen, facing -0.95.
     { sel: "#inside", side: 0, fx: 0.5, y: 0.572, h: 0.69, yaw: -0.95, tilt: 0, pitch: 0.14, o: 1, exact: true, move: { rocket: true } },
@@ -169,7 +190,12 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
   let lastY = window.scrollY;
   let moved = 0; // px scrolled since the last frame
   const companionPose = (time: number) => {
-    const mid = H * 0.5;
+    // The hand-over pose, as the exploded view measured its opening frame.
+    if (shot.insideOpen) Object.assign(POSES[1], shot.insideOpen);
+    // Where a section takes over: mid-screen on desktop; on phones and tablets
+    // at the top, so it docks with the exploded view only once that section
+    // (title above the model) has risen into place, never over its title.
+    const mid = roomy ? H * 0.5 : 0;
     let c = 0;
     POSES.forEach((p, i) => p.el && p.el.getBoundingClientRect().top <= mid && (c = i));
     const cur = POSES[c];
@@ -177,7 +203,8 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     // Holds its pose through a section (however long — pinned ones are), and
     // moves on as the next section rises from the bottom to the middle.
     const nextTop = next === cur ? H : next.el!.getBoundingClientRect().top;
-    const t = inOut(clamp01((H - nextTop) / (H - mid)));
+    const raw = clamp01((H - nextTop) / (H - mid));
+    const t = inOut(raw);
     // In the middle of the margin beside the 72rem content column.
     const margin = Math.max(56, (W - 1152) / 4);
     const sx = (p: Pose) => (p.fx !== undefined ? W * p.fx : p.side > 0 ? W - margin : margin);
@@ -187,7 +214,11 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const ex = lerp(cur.exact ? 1 : 0, next.exact ? 1 : 0, t);
     pose.x = lerp(sx(cur), sx(next), t);
     pose.y = lerp(py(cur), py(next), t) + Math.sin(time * 0.7) * H * 0.012 * (1 - ex);
-    pose.h = lerp(cur.h, next.h, t) * H;
+    // Phones and tablets: small on the move — it only grows in the last tenth
+    // of the scroll as it docks with the exploded view, and is small again
+    // within the first eighth after it leaves (by scroll, not the eased move).
+    const ht = roomy ? t : next.h > cur.h ? smooth(0.9, 1, raw) : smooth(0, 0.12, raw);
+    pose.h = lerp(cur.h, next.h, ht) * H;
     // Drifts idly up to the exploded view; from the products on it turns with
     // the scroll instead (one turn every five screens or so).
     const spin = Math.max(0, H - POSES[2].el!.getBoundingClientRect().top) / H * 1.2;
@@ -349,9 +380,10 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     const pulled = smooth(0.0, 0.05, s);
     parts.pin.position.set(pinRest.x + pulled * 0.12, pinRest.y - smooth(0.04, 0.12, s) * 0.5, pinRest.z);
     parts.pin.visible = s < 0.12 || after > 0.5;
-    // Then the hose comes up and points at the fire, ~106° from hanging —
-    // and hangs back down once the job is done and it moves on.
-    hosePivot.rotation.z = -1.85 * inOut(smooth(0.02, 0.09, s)) * (1 - inOut(after));
+    // Then the hose comes up and points at the fire, ~106° from hanging (below
+    // 1280px ~77°: level, so it never crosses the words above it)
+    // — and hangs back down once the job is done and it moves on.
+    hosePivot.rotation.z = -(narrow ? 1.35 : 1.85) * inOut(smooth(0.02, 0.09, s)) * (1 - inOut(after));
     const spraying = s > 0.06 && s < 0.9;
     if (spraying) rig.position.x += Math.sin(time * 47) * 0.0025 * scale;
 

@@ -153,14 +153,66 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     return { ...p, meshes, rest: meshes.map((m) => m.position.clone()), anchor };
   });
 
-  const camera = new THREE.PerspectiveCamera(20, 1, 0.05, 20);
+  const FOV = 20;
+  const TAN = Math.tan((FOV * Math.PI) / 360);
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.05, 20);
   const tmp = new THREE.Vector3();
   let W = 1;
   let H = 1;
+  let titleBottom = 0; // px from the stage's top to under the title
   const state = { p: still ? 0.5 : 0 };
 
+  // Phones: name-only labels in narrow columns at the screen's edges.
+  const labelW = phone ? 100 : 230;
+  const labelEdge = () => (phone ? 10 + labelW : Math.max(262, W * 0.24));
+
+  /*
+   * Framing. Desktop: the model stands centred, the title beside it. Narrower
+   * (phones, tablets): the title is above it, so at rest the model fills the
+   * space under the title; as it comes apart (and the title fades) the camera
+   * pulls back to centre it on the whole screen, far enough that the parts
+   * clear the label columns. Returns camera distance, look-at height, and a
+   * sideways shift (exploded, most of the parts swing out to the left).
+   */
+  const frameAt = (e: number) => {
+    if (W >= 1024) return { dist: lerp(2.68, 3.6, e), ty: lerp(0.07, 0.08, e), cx: 0 };
+    const top = titleBottom + 16;
+    const restH = Math.min(H - top - 24, H * 0.42); // under the title, no bigger than 42% of the screen
+    const restDist = (HEIGHT * H) / (2 * TAN * restH);
+    const restF = (top + restH / 2) / H;
+    const room = W / 2 - labelEdge() - 8;
+    const expDist = Math.max((0.98 * H) / (2 * TAN * (H - 96)), (0.15 * H) / (2 * TAN * room));
+    const dist = lerp(restDist, expDist, e);
+    const f = lerp(restF, 0.53, e);
+    return { dist, ty: (f - 0.5) * 2 * dist * TAN, cx: -0.05 * e };
+  };
+  const place = (e: number) => {
+    const { dist, ty, cx } = frameAt(e);
+    camera.position.set(cx, ty + dist * 0.14, dist);
+    camera.lookAt(cx, ty, 0);
+  };
+
+  // Measure the opening frame (at rest, as it stands when the drifting
+  // extinguisher arrives) and publish it for the hand-over: where the model's
+  // centre lands on the screen, how tall it is there, and the pitch that makes
+  // a model seen straight on (the drifting one) look like this one, seen from
+  // above. Shared by every screen size, so the two always line up.
+  const publishOpen = () => {
+    place(0);
+    camera.updateMatrixWorld();
+    const sy = (y: number) => ((-tmp.set(0, y, 0).project(camera).y * 0.5 + 0.5) * H + host.offsetTop) / innerHeight;
+    const c = sy(0);
+    const h = sy(-HEIGHT / 2) - sy(HEIGHT / 2);
+    const { dist, ty } = frameAt(0);
+    const fromAbove = Math.atan2(ty + dist * 0.14, dist);
+    const offAxis = Math.atan((c - 0.5) * 2 * Math.tan((20 * Math.PI) / 360)); // the drifting camera: 20°, whole screen
+    // ×1.014: seen pitched and from further off, the drifting model reads
+    // ~1.4% shorter at the same scale (measured on phone, tablet and desktop).
+    shot.insideOpen = { y: c, h: h * 1.014, pitch: fromAbove - offAxis };
+  };
+
   const layoutCallouts = (p: number, e: number) => {
-    if (phone) return;
+    const oy = host.offsetTop;
     type C = { el: HTMLElement; ax: number; ay: number; y: number; left: boolean; o: number };
     const all: C[] = groups.map((g, i) => {
       // Follow the part as it moves: anchor + its current displacement.
@@ -173,21 +225,24 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
       const ay = (-tmp.y * 0.5 + 0.5) * H;
       return { el: callouts[i], ax, ay, y: ay, left: ax < W / 2, o: smooth(0.42 + i * 0.015, 0.54 + i * 0.015, p) * smooth(0.6, 0.85, e) };
     });
-    // Each column in order of height, at least 3.6rem apart, kept on screen.
+    // Each column in order of height, a label apart, kept on screen.
+    const gap = phone ? 30 : 58;
     for (const left of [true, false]) {
       const col = all.filter((c) => c.left === left).sort((a, b) => a.ay - b.ay);
-      for (let k = 1; k < col.length; k++) col[k].y = Math.max(col[k].y, col[k - 1].y + 58);
-      const over = col.length ? col[col.length - 1].y - (H - 40) : 0;
+      for (let k = 1; k < col.length; k++) col[k].y = Math.max(col[k].y, col[k - 1].y + gap);
+      const over = col.length ? col[col.length - 1].y - (H - (phone ? 24 : 40)) : 0;
       if (over > 0) col.forEach((c) => (c.y -= over));
     }
-    const colX = (left: boolean) => (left ? Math.max(262, W * 0.24) : W - Math.max(262, W * 0.24));
+    const edge = labelEdge();
+    const colX = (left: boolean) => (left ? edge : W - edge);
+    const tick = phone ? 6 : 10;
     let d = "";
     for (const c of all) {
       const x = colX(c.left);
       c.el.style.opacity = c.o.toFixed(3);
-      c.el.style.transform = `translate(${(c.left ? x - 230 : x).toFixed(1)}px, ${(c.y - 18).toFixed(1)}px)`;
+      c.el.style.transform = `translate(${(c.left ? x - labelW : x).toFixed(1)}px, ${(c.y + oy - (phone ? 9 : 18)).toFixed(1)}px)`;
       c.el.style.textAlign = c.left ? "right" : "left";
-      if (c.o > 0.02) d += `M${c.ax.toFixed(1)} ${c.ay.toFixed(1)}L${(c.left ? x + 10 : x - 10).toFixed(1)} ${c.y.toFixed(1)}`;
+      if (c.o > 0.02) d += `M${c.ax.toFixed(1)} ${(c.ay + oy).toFixed(1)}L${(c.left ? x + tick : x - tick).toFixed(1)} ${(c.y + oy).toFixed(1)}`;
     }
     const path = svg.firstElementChild as SVGPathElement;
     path.setAttribute("d", d);
@@ -219,10 +274,7 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
       });
     }
 
-    const dist = lerp(phone ? 3.14 : 2.68, phone ? 4.32 : 3.6, e);
-    const ty = lerp(0.07, 0.08, e);
-    camera.position.set(0, ty + dist * 0.14, dist);
-    camera.lookAt(0, ty, 0);
+    place(e);
     (shadow.material as THREE.MeshBasicMaterial).opacity = 1 - e * 0.7;
 
     // The hand-overs: this model is only shown between them.
@@ -236,15 +288,18 @@ export async function mountExploded({ section, host, svg, callouts, intro }: Els
     const r = host.getBoundingClientRect();
     W = r.width;
     H = r.height;
+    titleBottom = intro.getBoundingClientRect().bottom - r.top;
     renderer.setSize(W, H, false);
     camera.aspect = W / H;
     camera.updateProjectionMatrix();
+    publishOpen();
     draw();
   };
   host.appendChild(canvas);
   resize();
   const ro = new ResizeObserver(resize);
   ro.observe(host);
+  ro.observe(intro); // the title's height (web font, wrapping) moves the narrow framing
 
   const stage = host.parentElement!;
   let ctx: gsap.Context | undefined;

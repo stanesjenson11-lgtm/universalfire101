@@ -9,8 +9,8 @@ import { prefersReduced } from "@/lib/motion";
  * quarter cutaway, and comes apart into its eleven parts as you scroll
  * (components/gl/exploded.ts). three.js loads only when the section is near.
  *
- * Without WebGL or JS the parts are a plain list; on phones the callouts give
- * way to the same list under the model.
+ * Without WebGL or JS the parts are a plain list. Phones get the callouts too,
+ * small: names only, in narrow columns at the edges, the model small between.
  */
 export default function Inside() {
   const section = useRef<HTMLElement>(null);
@@ -60,16 +60,17 @@ export default function Inside() {
     <section ref={section} id="inside" data-ground="dark" className="group on-black relative overflow-hidden">
       {/* The stage pins while the model comes apart; callouts live inside it. */}
       <div className="relative h-svh min-h-[40rem] overflow-hidden">
-        {/* Phones: the model stands below the title instead of behind it. */}
-        <div ref={host} aria-hidden="true" className="absolute inset-0 max-[760px]:top-[clamp(15rem,36%,19rem)]" />
-        <svg ref={svg} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full max-[760px]:hidden">
+        {/* The whole stage at every size; narrower than desktop, the camera
+            frames the model under the title (exploded.ts, frameAt). */}
+        <div ref={host} aria-hidden="true" className="absolute inset-0" />
+        <svg ref={svg} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full">
           <path fill="none" stroke="rgb(255 255 255 / 0.35)" strokeWidth="1" />
         </svg>
-        <ol ref={list} aria-hidden="true" className="pointer-events-none absolute inset-0 max-[760px]:hidden">
+        <ol ref={list} aria-hidden="true" className="pointer-events-none absolute inset-0">
           {parts.map((p) => (
-            <li key={p.name} className="absolute top-0 left-0 w-[230px] opacity-0">
-              <p className="text-small font-semibold">{p.name}</p>
-              <p className="text-micro text-muted-dark">{p.note}</p>
+            <li key={p.name} className="absolute top-0 left-0 w-[230px] opacity-0 max-[760px]:w-[100px]">
+              <p className="text-small font-semibold max-[760px]:text-[0.6875rem] max-[760px]:leading-tight">{p.name}</p>
+              <p className="text-micro text-muted-dark max-[760px]:hidden">{p.note}</p>
             </li>
           ))}
         </ol>
@@ -82,8 +83,8 @@ export default function Inside() {
           <p className="mx-auto mt-4 max-w-[40ch] text-lead text-muted-dark wide:mx-0">{body}</p>
         </div>
       </div>
-      {/* The same parts as plain text: phones, no-JS, no WebGL, screen readers. */}
-      <ol className="grid gap-x-grid gap-y-6 px-gutter pb-section sm:grid-cols-2 wide:grid-cols-5 min-[761px]:group-data-[live]:sr-only">
+      {/* The same parts as plain text: no-JS, no WebGL, screen readers. */}
+      <ol className="grid gap-x-grid gap-y-6 px-gutter pb-section sm:grid-cols-2 wide:grid-cols-5 group-data-[live]:sr-only">
         {parts.map((p) => (
           <li key={p.name}>
             <p className="text-small font-semibold">{p.name}</p>

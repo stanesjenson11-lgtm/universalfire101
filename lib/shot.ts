@@ -13,6 +13,11 @@ export const shot = {
   nozzleDir: [-1, 0] as [number, number],
   /** 0 → 1: progress through the exploded view (components/gl/exploded.ts). */
   inside: 0,
+  /** The exploded view's opening frame, as the drifting extinguisher must
+   *  match it to hand over: model centre (fraction of the screen height from
+   *  the top), model height (fraction of it), and how far to pitch toward the
+   *  camera. Null until the exploded view has measured itself. */
+  insideOpen: null as null | { y: number; h: number; pitch: number },
   /** Set when the fire canvas has a working WebGL context. */
   live: false,
 };

@@ -160,6 +160,18 @@ function Holder() {
 export default function CityScene() {
   const root = useRef<SVGSVGElement>(null);
 
+  // Phones see only ~420 of the 1600 units across: centre that window on the
+  // fireman holding the extinguisher (HOLDER), not on the middle of the street.
+  useEffect(() => {
+    const svg = root.current;
+    if (!svg) return;
+    const portrait = window.matchMedia("(max-width: 760px)");
+    const frame = () => svg.setAttribute("viewBox", portrait.matches ? `${HOLDER.x - 30 - 800} 0 1600 900` : "0 0 1600 900");
+    frame();
+    portrait.addEventListener("change", frame);
+    return () => portrait.removeEventListener("change", frame);
+  }, []);
+
   useEffect(() => {
     const svg = root.current;
     if (!svg) return;
