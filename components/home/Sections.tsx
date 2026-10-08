@@ -137,25 +137,29 @@ export function Products() {
 
 /* ------------------------------------------------------------------------ */
 
-/** Seven extinguisher types behind an Apple segmented control. */
+/**
+ * Seven extinguisher types behind an Apple segmented control. Desktop: one
+ * screen that locks — heading beside its intro, the photo beside the table.
+ */
 export function Specs() {
   const types = page("types-of-fire-extinguisher")!;
   const specs = types.blocks.filter((b): b is Extract<Block, { type: "specs" }> => b.type === "specs");
   const intro = types.blocks.find((b): b is Extract<Block, { type: "prose" }> => b.type === "prose")!;
   const [at, setAt] = useState(0);
   const s = specs[at];
+  const scope = useLock();
 
   return (
-    <section id="specs" data-ground="light" className="bg-white px-gutter py-section-lg">
-      <div className="mx-auto max-w-[72rem]">
-        <div className="max-w-[46rem]">
+    <section ref={scope} id="specs" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
+      <div className="mx-auto w-full max-w-[72rem]">
+        <div className="grid items-end gap-x-12 gap-y-5 wide:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
           <Headline>Every extinguisher, by the numbers</Headline>
-          <p className="mt-5 text-lead text-muted">
+          <p className="max-w-[46rem] text-lead text-muted wide:text-body">
             <Rich text={intro.body[0]} />
           </p>
         </div>
 
-        <div role="tablist" aria-label="Extinguisher type" className="mt-10 -mx-gutter overflow-x-auto px-gutter [scrollbar-width:none]">
+        <div role="tablist" aria-label="Extinguisher type" className="mt-10 -mx-gutter wide:mt-[clamp(1rem,3svh,2rem)] overflow-x-auto px-gutter [scrollbar-width:none]">
           <div className="inline-flex gap-1 rounded-full bg-paper p-1">
             {specs.map((x, i) => (
               <button
@@ -173,18 +177,24 @@ export function Specs() {
           </div>
         </div>
 
-        <div id="spec-panel" role="tabpanel" aria-labelledby={`spec-tab-${at}`} className="mt-10 grid gap-x-16 gap-y-8 wide:grid-cols-12">
-          <div className="wide:col-span-4">
-            <div key={s.image?.src} className="card relative aspect-square overflow-hidden bg-paper">
-              {s.image && <Image src={s.image.src} alt={s.image.alt} fill sizes="22rem" className="object-contain p-[8%] mix-blend-multiply" />}
-            </div>
-            <h3 className="mt-6 text-h3 font-semibold">{s.heading}</h3>
-            {s.suitable && <p className="mt-3 text-small text-muted">{s.suitable}</p>}
+        <div
+          id="spec-panel"
+          role="tabpanel"
+          aria-labelledby={`spec-tab-${at}`}
+          className="mt-10 grid gap-x-12 gap-y-8 wide:mt-[clamp(1rem,3svh,2rem)] wide:grid-cols-12"
+        >
+          {/* Desktop: as tall as the table beside it. */}
+          <div key={s.image?.src} className="card relative aspect-square overflow-hidden bg-paper wide:col-span-4 wide:aspect-auto">
+            {s.image && <Image src={s.image.src} alt={s.image.alt} fill sizes="22rem" className="object-contain p-[8%] mix-blend-multiply" />}
           </div>
-          {/* Keyed so every switch re-runs the number tickers. */}
-          <SpecTable key={at} rows={s.rows} columns={s.columns} className="wide:col-span-8" />
+          <div className="wide:col-span-8">
+            <h3 className="text-h3 font-semibold">{s.heading}</h3>
+            {s.suitable && <p className="mt-2 text-small text-muted">{s.suitable}</p>}
+            {/* Keyed so every switch re-runs the number tickers. Rows tighten on short screens. */}
+            <SpecTable key={at} rows={s.rows} columns={s.columns} className="mt-4 wide:[--row:clamp(0.35rem,1.1svh,0.75rem)]" />
+          </div>
         </div>
-        <p className="mt-10">
+        <p className="mt-10 wide:mt-[clamp(1rem,3svh,2rem)]">
           <a href="#types-of-fire-extinguisher" className="more">
             Read the complete guide
           </a>
@@ -196,18 +206,28 @@ export function Specs() {
 
 /* ------------------------------------------------------------------------ */
 
-/** The four services as an Apple bento: one large tile, three smaller. */
+/**
+ * The four services as an Apple bento: one large tile, three smaller.
+ * Desktop: one screen that locks — the large tile down the left, the three
+ * as image-beside-words tiles stacked on the right, all filling what is left.
+ */
 export function Services() {
+  const scope = useLock();
   return (
-    <section id="services" data-ground="dark" className="on-black px-gutter py-section-lg">
-      <div className="mx-auto max-w-[72rem]">
+    <section ref={scope} id="services" data-ground="dark" className="on-black px-gutter py-section-lg wide:frame">
+      <div className="mx-auto flex min-h-0 w-full max-w-[72rem] flex-1 flex-col">
         <Headline className="max-w-[18ch]">Looked after, all year</Headline>
-        <p className="mt-5 max-w-[52ch] text-lead text-muted-dark">{strip(page("services")!.lede)}</p>
-        <ul className="mt-12 grid gap-grid wide:grid-cols-3 wide:grid-rows-2">
+        <p className="mt-5 max-w-[52ch] text-lead text-muted-dark wide:mt-[clamp(0.5rem,1.5svh,1.25rem)]">{strip(page("services")!.lede)}</p>
+        <ul className="mt-12 grid gap-grid wide:mt-[clamp(1.25rem,4svh,3rem)] wide:min-h-0 wide:flex-1 wide:grid-cols-2 wide:grid-rows-3">
           {services.map((p, i) => (
-            <li key={p.slug} className={i === 0 ? "wide:col-span-2 wide:row-span-2" : ""}>
-              <a href={`#${p.slug}`} className="tile group relative flex h-full min-h-[22rem] flex-col overflow-hidden bg-graphite">
-                <div className={`relative overflow-hidden ${i === 0 ? "aspect-[16/10]" : "aspect-[16/9]"}`}>
+            <li key={p.slug} className={i === 0 ? "wide:row-span-3" : "wide:min-h-0"}>
+              <a
+                href={`#${p.slug}`}
+                className={`tile group relative flex h-full min-h-[22rem] flex-col overflow-hidden bg-graphite ${i === 0 ? "" : "wide:min-h-0 wide:flex-row"}`}
+              >
+                <div
+                  className={`relative overflow-hidden ${i === 0 ? "aspect-[16/10] wide:aspect-auto wide:min-h-0 wide:flex-1" : "aspect-[16/9] wide:aspect-auto wide:w-[40%] wide:shrink-0"}`}
+                >
                   <Image
                     src={p.image.src}
                     alt={p.image.alt}
@@ -216,9 +236,14 @@ export function Services() {
                     className="object-cover transition-transform duration-[1200ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.04]"
                   />
                 </div>
-                <div className="flex flex-1 flex-col gap-3 p-[clamp(1.25rem,2.5vw,2rem)]">
+                <div
+                  className={`flex flex-col gap-3 p-[clamp(1.25rem,2.5vw,2rem)] wide:gap-[clamp(0.25rem,1svh,0.75rem)] wide:p-[clamp(1rem,2.6svh,1.75rem)] ${i === 0 ? "" : "flex-1 wide:min-w-0"}`}
+                >
                   <h3 className={i === 0 ? "text-h2 font-semibold" : "text-h3 font-semibold"}>{p.title}</h3>
-                  <p className="text-muted-dark">{strip(p.lede)}</p>
+                  {/* Small tiles, desktop: a two-line teaser (one on short screens); the sheet has the rest. */}
+                  <p className={`text-muted-dark ${i === 0 ? "" : "wide:line-clamp-2 wide:text-small [@media(max-height:720px)]:wide:line-clamp-1"}`}>
+                    {strip(p.lede)}
+                  </p>
                   <span className="more mt-auto">Learn more</span>
                 </div>
               </a>
@@ -262,10 +287,10 @@ export function Sectors() {
   });
   return (
     <section ref={scope} id="sectors" data-ground="light" className="group frame overflow-x-clip bg-white">
-      <div className="mx-auto grid w-full max-w-[72rem] items-end gap-x-12 gap-y-5 px-gutter wide:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+      <div className="mx-auto w-full max-w-[72rem] px-gutter">
         <Headline>{heading}</Headline>
-        <div>
-          <p className="text-lead text-muted">
+        <div className="mt-4 max-w-[44rem]">
+          <p className="text-body text-muted">
             <Rich text={intro} />
           </p>
           <div className="mt-6 flex gap-2 group-data-[driven]:hidden" aria-label="Scroll sectors">

@@ -232,9 +232,10 @@ export default function CityScene() {
       {Array.from({ length: 46 }, (_, i) => (
         <circle key={i} className="star" cx={r1(rnd(i) * 1600)} cy={r1(20 + rnd(i + 100) * 380)} r={r1(0.8 + rnd(i + 200) * 1.3)} fill="#fff" opacity="0.45" />
       ))}
-      <circle cx="1330" cy="215" r="40" fill="#e8e4d8" opacity="0.92" />
-      <circle cx="1318" cy="205" r="7" fill="#d4cfc0" />
-      <circle cx="1344" cy="227" r="5" fill="#d4cfc0" />
+      {/* Low enough to stay clear of the nav even where a short, wide screen crops the sky. */}
+      <circle cx="1330" cy="290" r="40" fill="#e8e4d8" opacity="0.92" />
+      <circle cx="1318" cy="280" r="7" fill="#d4cfc0" />
+      <circle cx="1344" cy="302" r="5" fill="#d4cfc0" />
 
       {BACK.map(([x, bw, h], i) => (
         <rect key={`b${i}`} x={x} y={STREET - h} width={bw} height={h} fill={C.back} />

@@ -24,6 +24,8 @@
   /* --- type: SF on Apple devices, Inter everywhere else ------------------ */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
+  /* The nav only (FidaroHQ's slate labels). */
+  --font-mono: var(--font-martian), "Martian Mono", ui-monospace, "SFMono-Regular", monospace;
 
   /* Apple's scale: 17px body at 1.47, large headlines tracked tight. */
   --text-hero: clamp(3rem, 8vw, 6rem);
@@ -58,7 +60,7 @@
   --text-micro--line-height: 1.33;
 
   /* --- layout ---------------------------------------------------------- */
-  --breakpoint-bar: 62rem; /* where logo, all five links and the call button fit the pill */
+  --breakpoint-bar: 62rem; /* where logo, the four links and Contact fit the pill */
   --breakpoint-wide: 64rem;
 
   --spacing-gutter: clamp(1.25rem, 5vw, 5rem);
@@ -81,6 +83,16 @@
     --spacing-section: 2.75rem;
     --spacing-section-lg: 4.5rem;
   }
+}
+
+/* The nav's labels, FidaroHQ's (Kickstart's slate): mono, small, tracked, upper case. */
+@utility u-meta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
 /* One screen: the section fits the viewport exactly, clear of the nav pill,
@@ -316,7 +328,10 @@
 }
 
 /* ==========================================================================
-   Nav — a floating pill (Kickstart's collapse, Apple's material).
+   Nav — FidaroHQ's (Kickstart's): a flat bar over the hero that collapses
+   into a floating glass pill once the page scrolls. Both states are the same
+   box; only the numbers move, so the collapse is one transition. Its sheen is
+   inset highlight lines, not FidaroHQ's gradient (no gradients here).
    ========================================================================== */
 
 .uf-nav {
@@ -324,80 +339,109 @@
   margin-inline: auto;
   margin-top: 0;
   max-width: 100%;
-  padding: 0.9rem 0;
+  padding: 1.25rem 0;
   border: 1px solid rgb(255 255 255 / 0);
   border-radius: 0;
-  background-color: rgb(0 0 0 / 0);
-  color: var(--color-paper);
+  background-color: rgb(255 255 255 / 0);
+  color: #fff;
   transition:
     max-width 800ms var(--ease-out-expo),
     padding 800ms var(--ease-out-expo),
     border-radius 800ms var(--ease-out-expo),
     margin-top 800ms var(--ease-out-expo),
-    color 300ms linear,
-    background-color 350ms linear,
-    border-color 350ms linear,
-    box-shadow 350ms linear;
+    color 400ms linear,
+    background-color 450ms linear,
+    border-color 450ms linear,
+    box-shadow 450ms linear;
 }
 
 [data-scrolled="true"] .uf-nav {
   margin-top: 0.75rem;
-  max-width: 68rem;
-  padding: 0.4rem 0.4rem 0.4rem 1.1rem;
-  border-radius: 980px;
-  border-color: rgb(255 255 255 / 0.12);
-  background-color: rgb(22 22 23 / 0.72);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+  max-width: 62rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: 999px;
+  border-color: rgb(255 255 255 / 0.16);
+  background-color: rgb(255 255 255 / 0.06);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 -1px 0 rgb(255 255 255 / 0.08),
+    0 14px 40px rgb(0 0 0 / 0.5);
 }
 
+/* Over a light section the bar flips to ink; everything inside draws from
+   currentColor, and the glass flips with it. */
 [data-ground="light"] .uf-nav {
   color: var(--color-ink);
 }
 
 [data-ground="light"][data-scrolled="true"] .uf-nav {
-  border-color: rgb(0 0 0 / 0.08);
-  background-color: rgb(255 255 255 / 0.72);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.08);
+  border-color: rgb(29 29 31 / 0.14);
+  background-color: rgb(29 29 31 / 0.05);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    inset 0 -1px 0 rgb(29 29 31 / 0.06),
+    0 14px 40px rgb(0 0 0 / 0.14);
 }
 
+/* The lockup, as tall as the Contact pill. */
 .uf-logo {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  height: 2.75rem;
-  transform-origin: left center;
-  transition: scale 800ms var(--ease-out-expo);
+  gap: 0.6rem;
+  height: 2.25rem;
 }
 .uf-logo svg {
   height: 100%;
   width: auto;
 }
-[data-scrolled="true"] .uf-logo {
-  scale: 0.9;
+
+/* Contact: the nav's one orange control. */
+.nav-contact {
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: var(--color-fire);
+  color: #fff;
+  transition:
+    transform 160ms var(--ease-out-quart),
+    background-color 200ms ease;
+}
+.nav-contact:active {
+  transform: scale(0.97);
+  background: var(--color-fire-deep);
+}
+@media (hover: hover) and (pointer: fine) {
+  .nav-contact:hover {
+    background: var(--color-fire-deep);
+  }
 }
 
-/* The current section's link. */
-.uf-link {
+/* Link underline sweeping in at the cut angle; it stays under the link for
+   the section on screen. */
+.cut-link {
   position: relative;
-  opacity: 0.8;
-  transition: opacity 200ms linear;
+  display: inline-block;
+  overflow: hidden;
 }
-.uf-link:hover,
-.uf-link[aria-current] {
-  opacity: 1;
-}
-.uf-link[aria-current]::after {
+.cut-link::after {
   content: "";
   position: absolute;
-  left: 50%;
-  bottom: -0.45rem;
-  width: 4px;
-  height: 4px;
-  margin-left: -2px;
-  border-radius: 50%;
-  background: var(--color-fire-bright);
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0) skewX(-12deg);
+  transform-origin: left;
+  transition: transform 0.5s var(--ease-out-expo);
+}
+.cut-link:hover::after,
+.cut-link:focus-visible::after,
+.cut-link[aria-current]::after {
+  transform: scaleX(1) skewX(-12deg);
 }
 
 /* Mobile sheet: kept mounted and inert when closed, so its clip-path

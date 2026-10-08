@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Martian_Mono } from "next/font/google";
 import { site } from "@/lib/content";
 import Nav from "@/components/chrome/Nav";
 import Footer from "@/components/chrome/Footer";
@@ -10,6 +10,8 @@ import "./globals.css";
    off the web, so it is never shipped. Everyone else gets Inter, the closest
    match, which also carries the wght axis the variable-font effects drive. */
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+/* The nav's slate type, as on FidaroHQ (SIL OFL). */
+const mono = Martian_Mono({ subsets: ["latin"], weight: "500", variable: "--font-martian", display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -76,7 +78,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={inter.variable}>
+    <html lang="en-IN" className={`${inter.variable} ${mono.variable}`}>
       <body>
         <a
           href="#main"

@@ -5,10 +5,13 @@ import { nav, site } from "@/lib/content";
 import Emblem from "@/components/ui/Emblem";
 
 /**
- * One page, one bar: full width over the black hero, a translucent pill once
- * scrolled (Kickstart's collapse in Apple's material), ink over white
- * sections. The link for the section under the bar is marked current.
+ * FidaroHQ's navbar (Kickstart's): a flat bar over the black hero that
+ * collapses into a floating glass pill once scrolled, ink over white sections
+ * (globals.css, .uf-nav). Mono slate links, the current section's underlined;
+ * Contact sits apart as the orange pill. Phones: the lockup and the menu.
  */
+const primary = nav.links.filter((l) => l.href !== "#contact");
+
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [onLight, setOnLight] = useState(false);
@@ -66,40 +69,41 @@ export default function Nav() {
           <a href="#top" className="uf-logo shrink-0" aria-label={`${site.name} — back to top`}>
             <Emblem variant="mark" />
             <span className="flex flex-col leading-none" aria-hidden="true">
-              <span className="text-[1.05rem] font-bold tracking-[-0.015em]">Universal Fire</span>
-              <span className="mt-1 text-micro opacity-75">Safety Equipments</span>
+              <span className="text-[1rem] font-bold tracking-[-0.015em]">Universal Fire</span>
+              <span className="mt-1 text-[0.6875rem] opacity-75">Safety Equipments</span>
             </span>
           </a>
 
-          <nav aria-label="Primary" className="hidden items-center gap-7 text-small bar:flex">
-            {nav.links.map((l) => (
-              <a key={l.href} href={l.href} className="uf-link" aria-current={current === l.href.slice(1) ? "true" : undefined}>
-                {l.label}
-              </a>
-            ))}
-          </nav>
+          <div className="flex items-center gap-3 bar:gap-10">
+            <nav aria-label="Primary" className="hidden items-center gap-10 bar:flex">
+              {primary.map((l) => (
+                <a key={l.href} href={l.href} className="u-meta cut-link" aria-current={current === l.href.slice(1) ? "true" : undefined}>
+                  {l.label}
+                </a>
+              ))}
+            </nav>
 
-          <div className="flex items-center gap-2">
-            {/* Phones get Kickstart's bar: the mark and the menu; the call
-                button lives in the sheet. */}
-            <a href={`tel:${site.phone.tel}`} className="btn btn-fire !min-h-9 !px-4 !py-1.5 !text-small tabular-nums max-bar:hidden">
-              {site.phone.display.replace("+91 ", "")}
+            <a href="#contact" className="nav-contact u-meta hidden min-[520px]:inline-flex" aria-current={current === "contact" ? "true" : undefined}>
+              Contact
             </a>
+
+            {/* Phones get Kickstart's bar: the lockup and the menu; calling and
+                WhatsApp live in the sheet. */}
             <button
-              className="relative z-[var(--z-overlay)] flex h-10 w-10 items-center justify-center bar:hidden"
+              className="relative z-[var(--z-overlay)] -mr-2.5 flex h-11 w-11 items-center justify-center bar:hidden"
               aria-expanded={open}
               aria-controls="mobile-menu"
               onClick={() => setOpen((v) => !v)}
             >
               <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
-              <span aria-hidden="true" className="relative block h-[8px] w-[18px]">
+              <span aria-hidden="true" className="relative block h-[9px] w-6">
                 <span
-                  className="absolute left-0 block h-[1.5px] w-full bg-current transition-transform duration-500 ease-[var(--ease-out-expo)]"
-                  style={{ transform: open ? "translateY(3.25px) rotate(45deg)" : "none" }}
+                  className="absolute left-0 block h-px w-full bg-current transition-transform duration-400 ease-[var(--ease-out-expo)]"
+                  style={{ transform: open ? "translateY(4px) rotate(12deg)" : "none" }}
                 />
                 <span
-                  className="absolute bottom-0 left-0 block h-[1.5px] w-full bg-current transition-transform duration-500 ease-[var(--ease-out-expo)]"
-                  style={{ transform: open ? "translateY(-3.25px) rotate(-45deg)" : "none" }}
+                  className="absolute bottom-0 left-0 block h-px w-full bg-current transition-transform duration-400 ease-[var(--ease-out-expo)]"
+                  style={{ transform: open ? "translateY(-4px) rotate(-12deg)" : "none" }}
                 />
               </span>
             </button>

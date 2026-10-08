@@ -203,7 +203,7 @@ export function SpecTable({
   return (
     <dl className={`text-small ${className}`}>
       {columns && (
-        <div className="grid grid-cols-[minmax(9rem,2fr)_3fr] gap-4 border-b border-ink pb-3 font-semibold">
+        <div className="grid grid-cols-[minmax(9rem,2fr)_3fr] gap-4 border-b border-ink pb-[var(--row,0.75rem)] font-semibold">
           <dt>Performance data</dt>
           <dd className="flex flex-wrap gap-x-6 gap-y-1">
             {columns.map((c) => (
@@ -213,7 +213,7 @@ export function SpecTable({
         </div>
       )}
       {rows.map(([label, ...values]) => (
-        <div key={label} className="grid grid-cols-[minmax(9rem,2fr)_3fr] gap-4 border-b border-[var(--rule)] py-3">
+        <div key={label} className="grid grid-cols-[minmax(9rem,2fr)_3fr] gap-4 border-b border-[var(--rule)] py-[var(--row,0.75rem)]">
           <dt className="text-muted">{label}</dt>
           <dd className="flex flex-wrap gap-x-6 gap-y-1 font-medium tabular-nums">
             {values.map((v, i) => (
