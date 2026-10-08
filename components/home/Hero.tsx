@@ -1,50 +1,50 @@
-import { home, wa } from "@/lib/content";
-import RandomLetterSwapPingPong from "@/components/fancy/text/random-letter-swap-pingpong-anim";
-import CityScene from "./CityScene";
+import Image from "next/image";
+import { home, site, wa } from "@/lib/content";
 
 /**
- * The hero: a city at night where fires keep breaking out and firemen keep
- * putting them out (CityScene), the line set large above it. The real 3D
- * extinguisher (ShotStage) hangs from the hand of the fireman in front —
- * CityScene marks it data-ext="home" — and scrolling sends it down into the fire.
- *
- * The headline is FidaroHQ's hero type (u-hero). The one call to action is
- * lettered on the fire engine's side: a layer with CityScene's viewBox and
- * crop, so the words stay on the engine at any size. Narrower than about 3:2
- * the crop cuts the engine off, and it sits under the line instead.
+ * The hero: a still photograph of a plain dark wall, the words on its left,
+ * and the real 3D extinguisher (ShotStage) standing on the right — this page
+ * marks its spot data-ext="home", and scrolling sends it down into the fire.
+ * Until the 3D arrives, a still of the model stands there (data-ext-poster;
+ * it fades out as the model fades in, globals.css .ext-live).
+ * Photo: Tak Kei Wong on Unsplash (unsplash.com/photos/PWOV__8cRpw), cropped to the wall.
+ * Portrait screens (phones, tablets held upright): the words on top, the extinguisher low under them.
  */
 export default function Hero() {
+  const { lines, support, cta } = home.hero;
   return (
-    <section id="top" data-ground="dark" className="on-black relative h-svh min-h-[40rem] overflow-hidden">
-      <CityScene />
-      <div className="relative z-[var(--z-content)] mx-auto max-w-[80rem] px-gutter pt-[clamp(6.5rem,15vh,9.5rem)]">
-        <h1 className="u-hero">
-          <RandomLetterSwapPingPong label={home.hero.lines[0]} autoPlayDelay={2750} />
-          <RandomLetterSwapPingPong label={home.hero.lines[1]} autoPlayDelay={2930} />
-        </h1>
-        <p className="u-lead mt-5 text-muted-dark sm:whitespace-nowrap">{home.hero.support}</p>
-        <a
-          href={wa(home.hero.cta.text)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="more mt-6 hidden text-lead [@media(max-aspect-ratio:73/50)]:inline-block"
-        >
-          {home.hero.cta.label}
-        </a>
+    <section id="top" data-ground="dark" className="on-black relative h-svh min-h-[36rem] overflow-hidden bg-[#3e423d]">
+      <Image src="/site/hero-wall.jpg" alt="" fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover object-[70%_50%]" />
+      {/* Deepens the wall so the light type holds 4.5:1 wherever it falls. */}
+      <div aria-hidden="true" className="absolute inset-0 bg-black/30" />
+
+      {/* Where the extinguisher stands: its box is the model's height, 48:112 like the model. */}
+      <div
+        data-ext="home"
+        aria-hidden="true"
+        className="absolute right-[16vw] bottom-[9svh] aspect-[48/112] h-[52svh] portrait:right-[14vw] portrait:bottom-[4svh] portrait:h-[30svh]"
+      >
+        {/* The still, rendered from the model in this pose: a little wider and taller than the box. */}
+        <span data-ext-poster className="absolute top-[-2.16%] left-[-42.15%] h-[108.9%] w-[146.9%]">
+          <Image src="/site/extinguisher-hand.webp" alt="" fill sizes="20vw" className="object-fill" />
+        </span>
       </div>
 
-      {/* Lettered on the engine's side panel, above its stripe (x 150–325, y 788–808 in CityScene). */}
-      <svg
-        viewBox="0 0 1600 900"
-        preserveAspectRatio="xMidYMax slice"
-        className="pointer-events-none absolute inset-0 z-[var(--z-content)] h-full w-full [@media(max-aspect-ratio:73/50)]:hidden"
-      >
-        <a href={wa(home.hero.cta.text)} target="_blank" rel="noopener noreferrer" className="uf-livery pointer-events-auto">
-          <text x="154" y="803">
-            {home.hero.cta.label}
-          </text>
-        </a>
-      </svg>
+      <div className="relative z-[var(--z-content)] mx-auto flex h-full max-w-[80rem] flex-col justify-center px-gutter portrait:justify-start portrait:pt-[clamp(6.5rem,16svh,9rem)]">
+        <h1 className="u-hero">
+          <span className="block">{lines[0]}</span>
+          <span className="block">{lines[1]}</span>
+        </h1>
+        <p className="u-lead mt-5 max-w-[40ch] text-paper">{support}</p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <a href={wa(cta.text)} target="_blank" rel="noopener noreferrer" className="btn btn-fire">
+            {cta.label}
+          </a>
+          <a href={`tel:${site.phone.tel}`} className="btn btn-line tabular-nums">
+            Call {site.phone.display}
+          </a>
+        </div>
+      </div>
     </section>
   );
 }

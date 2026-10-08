@@ -181,11 +181,12 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
         { sel: "#about", side: 0, fx: 1.3, y: 0.82, h: 0.1, yaw: 0.7, tilt: -0.3, o: 0 }, // off right while you read
         { sel: "#inside", side: 0, fx: 0.5, y: 0.6, h: 0.5, yaw: -0.95, tilt: 0, pitch: 0.12, o: 1, exact: true, move: { rocket: true } },
         { sel: "#products", side: 0, fx: 1.25, y: 1.35, h: 0.1, yaw: -0.5, tilt: 0, o: 0, move: { rocket: true, trail: true } },
-        // Up into the 24/7 band, above the call buttons (they sit bottom right).
-        { sel: "footer", side: 0, fx: 0.88, y: 0.06, h: 0.1, yaw: -0.5, tilt: 0, o: 1, onPage: true, exact: true, move: { trail: true } },
+        // Into the night sky, right of the contact details (clear of the nav and the words).
+        { sel: "footer", side: 0, fx: 0.92, y: 0.45, h: 0.1, yaw: -0.5, tilt: 0, o: 1, onPage: true, exact: true, move: { trail: true } },
       ];
   const POSES = (!roomy ? PHONE : [
-    { sel: "#about", side: 1, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 1 },
+    // Off the right edge while you read the profile (the portrait fills the right), then back in for the exploded view.
+    { sel: "#about", side: 0, fx: 1.3, y: 0.62, h: 0.24, yaw: 0.7, tilt: -0.16, o: 0 },
     // The exploded view's opening frame: centred, 69% of the screen, facing -0.95.
     { sel: "#inside", side: 0, fx: 0.5, y: 0.572, h: 0.69, yaw: -0.95, tilt: 0, pitch: 0.14, o: 1, exact: true, move: { rocket: true } },
     { sel: "#products", side: -1, y: 0.6, h: 0.24, yaw: -0.5, tilt: 0.2, o: 1, move: { trail: true } },
@@ -198,7 +199,7 @@ export async function mountShotStage({ stage, hero, fire, home, land }: Els, sti
     // (moves under the left margin unseen, to rise back up there)
     { sel: "#licence", side: -1, y: 1.45, h: 0.24, yaw: -0.5, tilt: 0.1, o: 0 },
     { sel: "#contact", side: -1, y: 0.62, h: 0.24, yaw: -0.5, tilt: 0.1, o: 1 },
-    { sel: "footer", side: 1, y: 0.16, h: 0.24, yaw: -0.5, tilt: 0, o: 1, fx: 0.58, onPage: true, exact: true, move: { trail: true } }, // upright in the 24/7 band
+    { sel: "footer", side: 1, y: 0.42, h: 0.24, yaw: -0.5, tilt: 0, o: 1, fx: 0.9, onPage: true, exact: true, move: { trail: true } }, // upright in the night sky, right of the offices, under the moon
   ] as Pose[]).map((p) => ({ ...p, el: document.querySelector<HTMLElement>(p.sel) }));
   const pose = { x: 0, y: 0, h: 0, yaw: 0, tilt: 0, pitch: 0, o: 0, rocket: 0, trail: 0, dx: 0, dy: 0, ins: 0 };
   let lastY = window.scrollY;

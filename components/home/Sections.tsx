@@ -52,76 +52,40 @@ function useLock() {
 
 /* ------------------------------------------------------------------------ */
 
-/**
- * About opens on "Our profile". Desktop: one screen that locks — all the copy
- * as one justified flow over two columns (so they balance and end on the same
- * line), its two notes headed by run-in heads, and the managing partner's
- * portrait beside the text, as tall as it (under the heading on phones).
- * "Protecting Tamil Nadu" follows as its own beat, the lead-in to the
- * exploded view.
- */
-const para = "mb-4 wide:mb-[clamp(0.5rem,1.6svh,0.875rem)]";
-
+/** Who we are in a paragraph, four facts under hairlines, and the managing partner. */
 export function About() {
-  const about = page("about-us")!;
-  const prose = about.blocks.filter((b): b is Extract<Block, { type: "prose" }> => b.type === "prose");
-  const person = about.blocks.find((b): b is Extract<Block, { type: "person" }> => b.type === "person")!;
-  const scope = useLock();
+  const { heading, body, facts } = home.about;
+  const person = page("about-us")!.blocks.find((b): b is Extract<Block, { type: "person" }> => b.type === "person")!;
   return (
-    <>
-      <section ref={scope} id="about" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
-        {/* Phones and tablets: Kickstart's About — the portrait floated right,
-            the justified copy running beside it and on underneath, airy
-            leading. Desktop: the grid (a clearfix ends the float below it). */}
-        <div className="mx-auto w-full max-w-[72rem] after:block after:clear-both after:content-[''] wide:grid wide:grid-cols-12 wide:gap-x-10 wide:gap-y-[clamp(0.75rem,2.5svh,1.5rem)] wide:after:hidden">
-          <Headline className="wide:col-span-9">{prose[0].heading!}</Headline>
-
-          {/* Beside the copy and as tall as it: the photo's top level with the
-              first line, the name level with the last. */}
-          <figure className="float-right mt-6 mb-3 ml-grid flex w-[42%] max-w-[17rem] flex-col wide:float-none wide:col-span-3 wide:col-start-10 wide:row-start-2 wide:m-0 wide:w-auto wide:max-w-none">
-            <div className="card relative aspect-[4/5] overflow-hidden bg-paper wide:aspect-auto wide:min-h-0 wide:flex-1">
-              <Image src={person.image.src} alt={person.image.alt} fill sizes="(min-width: 1024px) 17rem, 22rem" className="object-cover object-[50%_25%]" />
-            </div>
-            <figcaption className="mt-2.5 wide:mt-4">
-              <p className="text-[1.0625rem] leading-tight font-semibold wide:text-h3">{person.name}</p>
-              <p className="mt-0.5 text-small text-muted wide:mt-1 wide:text-body">{person.role}</p>
-            </figcaption>
-          </figure>
-
-          {/* One flow, justified (hyphenated where the browser can, so the
-              spacing stays even), that the browser balances over two columns.
-              Single lines may carry over (orphans/widows 1), so the columns
-              end within a line of each other whatever the copy. The notes'
-              headings run in to their first paragraph, so none can be left
-              alone at the foot of a column. 16px on desktop keeps the
-              justified measure near 55 characters. */}
-          <div className="mt-6 text-justify text-muted hyphens-auto [orphans:1] [widows:1] max-wide:leading-[1.85] wide:col-span-9 wide:mt-0 wide:columns-2 wide:gap-10 wide:text-[clamp(0.875rem,2.3svh,1rem)] [&>*:last-child]:mb-0">
-            {prose[0].body.map((p) => (
-              <p key={p} className={para}>
-                <Rich text={p} />
-              </p>
+    <section id="about" data-ground="light" className="bg-white px-gutter py-section-lg">
+      <div className="mx-auto grid max-w-[72rem] gap-x-16 gap-y-10 wide:grid-cols-12 wide:items-end">
+        <div className="wide:col-span-8">
+          <Headline>{heading}</Headline>
+          <p className="mt-5 max-w-[56ch] text-lead text-muted">
+            <Rich text={body} />
+          </p>
+          <dl className="mt-10 grid gap-x-grid gap-y-6 sm:grid-cols-2">
+            {facts.map((f) => (
+              <div key={f.term} className="border-t border-[var(--rule)] pt-4">
+                <dt className="font-semibold">{f.term}</dt>
+                <dd className="mt-1 text-muted">{f.text}</dd>
+              </div>
             ))}
-            {prose.slice(1).flatMap((b) =>
-              b.body.map((p, i) => (
-                <div key={p} className={para}>
-                  {i === 0 && <h3 className="mr-[0.35em] inline font-semibold text-ink after:content-['.']">{b.heading}</h3>}
-                  <p className="inline">
-                    <Rich text={p} />
-                  </p>
-                </div>
-              )),
-            )}
-          </div>
+          </dl>
         </div>
-      </section>
 
-      {/* Desktop: a screen of its own, so it holds the centre while the drifting
-          extinguisher is still in the margin, and that leaves for the exploded
-          view only as this scrolls away. */}
-      <section aria-label="Protecting Tamil Nadu" data-ground="light" className="bg-white px-gutter py-section wide:grid wide:min-h-svh wide:place-items-center">
-        <Statement first="Protecting" second="Tamil Nadu" media={about.image} />
-      </section>
-    </>
+        {/* Phones: a small portrait beside the name. Desktop: a column of its own. */}
+        <figure className="flex items-center gap-5 wide:col-span-4 wide:block">
+          <div className="card relative aspect-[4/5] w-28 shrink-0 overflow-hidden bg-paper wide:w-full">
+            <Image src={person.image.src} alt={person.image.alt} fill sizes="(min-width: 1024px) 22rem, 7rem" className="object-cover object-[50%_25%]" />
+          </div>
+          <figcaption className="wide:mt-4">
+            <p className="text-h3 font-semibold">{person.name}</p>
+            <p className="mt-1 text-muted">{person.role}</p>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
   );
 }
 

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap, loaderDone, prefersReduced } from "@/lib/motion";
+import { gsap, prefersReduced } from "@/lib/motion";
 
 /*
- * The hero's city at night, drawn flat (no gradients) in a 1600 × 900 box
- * anchored to the bottom of the hero. Fires break out in windows and on a
+ * The footer's city at night, drawn flat (no gradients) in a 1600 × 900 box
+ * anchored to the bottom of the footer. Fires break out in windows and on a
  * roof; firemen — one up the engine's ladder — turn, raise their
  * extinguishers and foam them out, one after another, on an endless loop.
  */
@@ -120,18 +120,10 @@ function Fireman({ dir }: { dir: number }) {
 }
 
 /*
- * The fireman in front, holding the real (3D) extinguisher at his side. His
- * arm hangs 55° forward; the extinguisher hangs from his hand to just off the
- * street. The rect at his hand is the 3D stage's home anchor (data-ext="home"),
- * so the extinguisher it draws leaves from his grip when you scroll.
+ * The fireman in front, holding an extinguisher at his side. His arm hangs
+ * 55° forward; the extinguisher hangs from his hand to just off the street.
  */
 const HOLDER = { x: 990, scale: 2.4, arm: 55 };
-const HAND = (() => {
-  const a = (HOLDER.arm * Math.PI) / 180;
-  const lx = SHOULDER.x + Math.cos(a) * 14;
-  const ly = SHOULDER.y + Math.sin(a) * 14;
-  return { x: HOLDER.x - lx * HOLDER.scale, y: STREET + ly * HOLDER.scale };
-})();
 
 function Holder() {
   return (
@@ -178,8 +170,7 @@ export default function CityScene() {
     const reduced = prefersReduced();
     const ctx = gsap.context(() => {
       // The ambient motion — flames, a few stars, the beacon — runs only while
-      // the hero is on screen and the preloader has lifted, like the incidents
-      // below: a tween left running off screen still costs a style write every
+      // the footer is on screen, like the incidents below: a tween left running off screen still costs a style write every
       // frame, on every phone, all the way down the page.
       const ambient: gsap.core.Animation[] = [];
       // Flames never sit still.
@@ -230,12 +221,11 @@ export default function CityScene() {
       CREW.forEach((_, i) => loop.add(incident(i), i * 2.1));
       if (reduced) loop.pause(2.6); // one still moment: two fires, one being foamed
 
-      // Only animate while the hero is on screen, and not under the preloader.
+      // Only animate while the footer is on screen.
       let onScreen = false;
-      let lifted = false;
       const run = () => {
         if (reduced) return;
-        const go = onScreen && lifted;
+        const go = onScreen;
         loop.paused(!go);
         ambient.forEach((t) => t.paused(!go));
       };
@@ -244,10 +234,6 @@ export default function CityScene() {
         run();
       });
       io.observe(svg);
-      loaderDone().then(() => {
-        lifted = true;
-        run();
-      });
       return () => io.disconnect();
     }, svg);
     return () => ctx.revert();
@@ -266,8 +252,7 @@ export default function CityScene() {
       {Array.from({ length: 46 }, (_, i) => (
         <circle key={i} className="star" cx={r1(rnd(i) * 1600)} cy={r1(20 + rnd(i + 100) * 380)} r={r1(0.8 + rnd(i + 200) * 1.3)} fill="#fff" opacity="0.45" />
       ))}
-      {/* The moon, low enough to stay clear of the nav even where a short, wide
-          screen crops the sky: a faint glow, soft-edged seas, craters with a
+      {/* The moon, high in the corner, clear of the footer's words: a faint glow, soft-edged seas, craters with a
           dark floor and a lit rim, and the edge darkening a touch (blur filters,
           no gradients). */}
       <defs>
@@ -281,7 +266,7 @@ export default function CityScene() {
           <circle r="40" />
         </clipPath>
       </defs>
-      <g transform="translate(1330 290)">
+      <g transform="translate(1420 170)">
         <circle r="46" fill="#e8e4d8" opacity="0.16" filter="url(#cs-moon-glow)" />
         <circle r="40" fill="#ebe7dc" />
         <g clipPath="url(#cs-moon-disc)">
@@ -342,8 +327,7 @@ export default function CityScene() {
       ))}
 
       {/* fire engine, ladder up against building 2. Far enough in from the
-          left that a 16:10 screen's crop keeps its cab, and the call to action
-          lettered on its side (Hero.tsx) clear of the edge. */}
+          left that a 16:10 screen's crop keeps its cab. */}
       <g>
         <line x1="296" y1="792" x2="356" y2="662" stroke="#8a8f99" strokeWidth="4" />
         <line x1="312" y1="800" x2="372" y2="670" stroke="#8a8f99" strokeWidth="4" />
@@ -394,12 +378,8 @@ export default function CityScene() {
 
       <Holder />
       {/* The extinguisher in his hand: top just above the grip, foot just off the street. */}
-      <rect data-ext="home" x={r1(HAND.x - 24)} y={r1(HAND.y - 10)} width="48" height="112" fill="none" />
-      {/* A still of the 3D extinguisher as it stands in his hand, rendered from
-          the model at 1440×900 (where these units are pixels): the hero has it
-          from the first paint, before the 3D loads (ShotStage), and it gives
-          way to the model as that fades in (globals.css, .ext-live). */}
-      <image data-ext-poster href="/site/extinguisher-hand.webp" x="914.5" y="745.5" width="70.5" height="122" />
+      {/* The extinguisher in his hand: a still rendered from the scanned 3D model. */}
+      <image href="/site/extinguisher-hand.webp" x="914.5" y="745.5" width="70.5" height="122" />
     </svg>
   );
 }

@@ -1073,8 +1073,18 @@ export const services = pages.filter((p) => p.group === "services");
 export const home = {
   hero: {
     lines: ["Ready before", "the spark."],
-    support: "Fire safety equipment and systems for all of Tamil Nadu.",
+    support: "BIS-approved, ISI & MMD-certified fire extinguishers, alarms, hydrants and suppression systems — supplied, installed and serviced across Tamil Nadu.",
     cta: { label: "Book a site survey", text: "Hi Universal Fire, I'd like to book a fire safety site survey." },
+  },
+  about: {
+    heading: "Our profile",
+    body: "Universal Fire supplies, installs and maintains ==certified fire safety equipment== from offices in Coimbatore and Chennai, with our own production, quality-control and service teams under one roof.",
+    facts: [
+      { term: "Our own brand", text: "Made, sold and serviced by us — not resold." },
+      { term: "NABH-accredited", text: "Certified protection, from a single extinguisher to a complete system install." },
+      { term: "Every type refilled", text: "Any extinguisher available in India, refilled to BIS standards." },
+      { term: "Training on site", text: "Firefighting training, fire drills and evacuation drills at your premises." },
+    ],
   },
   fire: {
     heading: "No.1 fire safety company in Coimbatore and Chennai",

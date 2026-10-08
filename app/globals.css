@@ -496,23 +496,6 @@
   opacity: 0;
 }
 
-/* The hero's call to action, lettered on the fire engine like its livery:
-   the cream of its stripe, the hero's wide face. */
-.uf-livery text {
-  font-family: var(--font-archivo), "Archivo", "Helvetica Neue", Arial, sans-serif;
-  font-stretch: 100%;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  fill: #f4f0d0;
-}
-.uf-livery:hover text,
-.uf-livery:focus-visible text {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 /* Contact: the nav's one orange control. */
 .nav-contact {
   align-items: center;
@@ -823,9 +806,9 @@
   }
 }
 
-/* The heavy part of the page under the loader — the hero's city (hundreds of
-   SVG shapes), the nav, everything below the hero — stays unpainted (laid
-   out, so every scroll position is right) until the foam has landed:
+/* The heavy part of the page under the loader — the nav, everything below
+   the hero — stays unpainted (laid out, so every scroll position is right)
+   until the foam has landed:
    otherwise the GPU rasterises it under the black and the animation hitches.
    It paints in the still beat before the shutter lifts. The hero's words are
    cheap and paint at once, so the page's main content is there from the
@@ -838,19 +821,6 @@
   }
   body:has(.uf-loader) :is(body > header, main, body > footer) {
     animation: uf-unveil 1ms 1240ms both; /* the foam's last pixels of easing in, ~still */
-  }
-  /* The hero's city (hundreds of SVG shapes, half the page's layout) is not
-     even laid out under the loader, so the first frame does not wait on it.
-     (Where display cannot animate, it is laid out hidden, as before.) */
-  body:has(.uf-loader) #top > svg {
-    animation:
-      uf-unveil 1ms 1240ms both,
-      uf-unveil-layout 1ms 1240ms both;
-  }
-}
-@keyframes uf-unveil-layout {
-  from {
-    display: none;
   }
 }
 @keyframes uf-unveil {
