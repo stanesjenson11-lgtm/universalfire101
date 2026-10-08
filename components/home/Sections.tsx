@@ -51,45 +51,72 @@ function useLock() {
 
 /* ------------------------------------------------------------------------ */
 
+/**
+ * About opens on "Our profile". Desktop: one screen that locks — all the copy
+ * as one justified flow over two columns (so they balance and end on the same
+ * line), its two notes headed by run-in heads, and the managing partner's
+ * portrait beside it, as tall as it (under the heading on phones). "Protecting Tamil Nadu" follows as its own beat,
+ * the lead-in to the exploded view.
+ */
+const para = "mb-4 wide:mb-[clamp(0.5rem,1.6svh,0.875rem)]";
+
 export function About() {
   const about = page("about-us")!;
   const prose = about.blocks.filter((b): b is Extract<Block, { type: "prose" }> => b.type === "prose");
   const person = about.blocks.find((b): b is Extract<Block, { type: "person" }> => b.type === "person")!;
+  const scope = useLock();
   return (
-    <section id="about" data-ground="light" className="bg-white px-gutter py-section-lg">
-      <Statement first="Protecting" second="Tamil Nadu" media={about.image} />
-      <div className="mx-auto mt-section grid max-w-[72rem] gap-x-16 gap-y-12 wide:grid-cols-2">
-        <div>
-          <Headline>{prose[0].heading!}</Headline>
-          {prose[0].body.map((p) => (
-            <p key={p} className="mt-5 text-lead text-muted">
-              <Rich text={p} />
-            </p>
-          ))}
-          <div className="mt-10 flex items-center gap-4">
-            <div className="relative h-16 w-16 overflow-hidden rounded-full bg-paper">
-              <Image src={person.image.src} alt={person.image.alt} fill sizes="4rem" className="object-cover" />
+    <>
+      <section ref={scope} id="about" data-ground="light" className="bg-white px-gutter py-section-lg wide:frame">
+        <div className="mx-auto grid w-full max-w-[72rem] gap-x-10 gap-y-8 wide:grid-cols-12 wide:gap-y-[clamp(0.75rem,2.5svh,1.5rem)]">
+          <Headline className="wide:col-span-9">{prose[0].heading!}</Headline>
+
+          {/* Beside the copy and as tall as it: the photo's top level with the
+              heading, the name level with the last line of text. */}
+          <figure className="flex flex-col wide:col-span-3 wide:row-span-2">
+            <div className="card relative aspect-[4/5] max-w-[22rem] overflow-hidden bg-paper wide:aspect-auto wide:min-h-0 wide:max-w-none wide:flex-1">
+              <Image src={person.image.src} alt={person.image.alt} fill sizes="(min-width: 1024px) 17rem, 22rem" className="object-cover object-[50%_25%]" />
             </div>
-            <div>
-              <p className="font-semibold">{person.name}</p>
-              <p className="text-small text-muted">{person.role}</p>
-            </div>
+            <figcaption className="mt-4">
+              <p className="text-h3 font-semibold">{person.name}</p>
+              <p className="mt-1 text-muted">{person.role}</p>
+            </figcaption>
+          </figure>
+
+          {/* One flow, justified (hyphenated where the browser can, so the
+              spacing stays even), that the browser balances over two columns.
+              Single lines may carry over (orphans/widows 1), so the columns
+              end within a line of each other whatever the copy. The notes'
+              headings run in to their first paragraph, so none can be left
+              alone at the foot of a column. 16px on desktop keeps the
+              justified measure near 55 characters. */}
+          <div className="text-justify text-muted hyphens-auto [orphans:1] [widows:1] wide:col-span-9 wide:columns-2 wide:gap-10 wide:text-[clamp(0.875rem,2.3svh,1rem)] [&>*:last-child]:mb-0">
+            {prose[0].body.map((p) => (
+              <p key={p} className={para}>
+                <Rich text={p} />
+              </p>
+            ))}
+            {prose.slice(1).flatMap((b) =>
+              b.body.map((p, i) => (
+                <div key={p} className={para}>
+                  {i === 0 && <h3 className="mr-[0.35em] inline font-semibold text-ink after:content-['.']">{b.heading}</h3>}
+                  <p className="inline">
+                    <Rich text={p} />
+                  </p>
+                </div>
+              )),
+            )}
           </div>
         </div>
-        <div className="flex flex-col gap-10">
-          {prose.slice(1).map((b) => (
-            <div key={b.heading} className="border-t border-[var(--rule)] pt-8">
-              <h3 className="text-h3 font-semibold">{b.heading}</h3>
-              {b.body.map((p) => (
-                <p key={p} className="mt-4 text-muted">
-                  <Rich text={p} />
-                </p>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Desktop: a screen of its own, so it holds the centre while the drifting
+          extinguisher is still in the margin, and that leaves for the exploded
+          view only as this scrolls away. */}
+      <section aria-label="Protecting Tamil Nadu" data-ground="light" className="bg-white px-gutter py-section wide:grid wide:min-h-svh wide:place-items-center">
+        <Statement first="Protecting" second="Tamil Nadu" media={about.image} />
+      </section>
+    </>
   );
 }
 
