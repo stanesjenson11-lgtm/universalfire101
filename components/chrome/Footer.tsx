@@ -111,7 +111,16 @@ export default function Footer() {
       </div>
 
       <div className="relative flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-[var(--rule-dark)] px-gutter py-3 text-micro text-muted-dark wide:py-4">
-        <p>© {new Date().getFullYear()} {site.name}</p>
+        <p>
+          © {new Date().getFullYear()} {site.name}
+          {/* Phones: on its own line; wider: after the copyright. */}
+          <span className="whitespace-nowrap max-sm:block">
+            <span className="max-sm:hidden"> · </span>Powered by{" "}
+            <a href="https://thearktech.in/" target="_blank" rel="noopener" className="text-paper hover:underline">
+              TheArkTech
+            </a>
+          </span>
+        </p>
         <p>Extinguishers approved by BIS, certified ISI & MMD.</p>
       </div>
     </footer>
